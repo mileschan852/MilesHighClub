@@ -35,7 +35,7 @@ export default {
     }
 
     if (path === '/api/quote' && req.method === 'POST') {
-      const body = await req.json()
+      const body = await req.json<any>()
       const uber = body.requestTaxi || (await isNight(body.startISO) && body.inKowloonOrNT)
         ? await uberHighestFare(env, body.location) : undefined
       const q = calculateQuote({ ...body, uberHighFare: uber })
@@ -43,7 +43,7 @@ export default {
     }
 
     if (path === '/api/bookings' && req.method === 'POST') {
-      const b = (await req.json()) as Booking
+      const b = (await req.json<Booking>()) as Booking
       b.id = crypto.randomUUID()
       b.status = 'pending'
       b.telegramUserId = user.id
@@ -59,7 +59,7 @@ export default {
     const m = path.match(/^\/api\/bookings\/([^/]+)\/status$/)
     if (m && req.method === 'POST') {
       if (!isAdmin) return json({ error: 'forbidden' }, 403)
-      const { status } = await req.json()
+      const { status } = await req.json<{ status: 'accepted' | 'rejected' }>()
       const all = await listBookings(env)
       const b = all.find((x) => x.id === m[1])
       if (b) {
@@ -95,7 +95,7 @@ export default {
 
 async function verifyTelegram(req: Request, env: Env) {
   // See https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
-  const body = await req.json().catch(() => ({}))
+  const body = await req.json<{ initData?: string }>().catch(() => ({ initData: undefined }))
   const initData = body.initData || req.headers.get('x-init-data') || ''
   if (!initData || !env.TELEGRAM_BOT_TOKEN) return null
   const params = new URLSearchParams(initData)
