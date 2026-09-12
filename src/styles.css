@@ -1,0 +1,19 @@
+* { box-sizing: border-box; margin: 0; }
+body { font-family: -apple-system, sans-serif; background: #111; color: #eee; }
+.app { max-width: 480px; margin: 0 auto; padding: 16px 16px 80px; }
+.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #1b1b1b; border-top: 1px solid #333; }
+.bottom-nav button { flex: 1; padding: 14px 0; background: none; border: 0; color: #eee; font-size: 14px; }
+.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+.slots button { padding: 10px 0; border-radius: 6px; border: 1px solid #444; background: #1b1b1b; color: #eee; }
+.slots button.busy { opacity: 0.3; }
+.slots button.free { cursor: pointer; }
+.calendar form, .profile, .admin, .quote { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #1b1b1b; color: #eee; }
+button { cursor: pointer; }
+.quote .notice { color: #f66; font-size: 13px; }
+.error { color: #f66; }
+.map.greyed { filter: grayscale(1); opacity: 0.4; text-align: center; padding: 60px 0; }
+.booking { display: flex; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid #333; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
+.booking.accepted { border-color: #2a2; }
+.booking.rejected { opacity: 0.5; }
+.gate { text-align: center; padding: 80px 0; }

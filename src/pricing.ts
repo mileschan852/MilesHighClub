@@ -1,0 +1,57 @@
+// Shared pricing engine - used by both client (preview) and worker (authoritative).
+
+export interface QuoteInput {
+  startISO: string            // booking start (ISO with HK offset)
+  people: number
+  location: string            // free text address
+  onHKIslandMTR: boolean      // location is at/on a Hong Kong Island MTR station
+  inKowloonOrNT: boolean      // location is in Kowloon or New Territories
+  requestTaxi: boolean        // customer explicitly chose "request taxi"
+  uberHighFare?: number       // Uber highest estimate (one-way) from worker, HKD
+}
+
+export interface QuoteResult {
+  base: number
+  option: 'A' | 'B' | 'NONE'
+  taxiFare: number
+  total: number
+  currency: 'HKD'
+}
+
+const NIGHT_START = 23 // 23:00
+const NIGHT_END = 8    // 08:00
+
+export function isNightRate(hourHK: number): boolean {
+  return hourHK >= NIGHT_START || hourHK < NIGHT_END
+}
+
+export function roundUpTo50(n: number): number {
+  return Math.ceil(n / 50) * 50
+}
+
+export function calculateQuote(input: QuoteInput): QuoteResult {
+  const start = new Date(input.startISO)
+  const hourHK = (start.getUTCHours() + 8) % 24 // Hong Kong = UTC+8
+
+  const perPerson = isNightRate(hourHK) ? 350 : 250
+  const base = perPerson * input.people
+
+  let option: QuoteResult['option'] = 'NONE'
+  let taxiFare = 0
+
+  if (input.requestTaxi || (isNightRate(hourHK) && input.inKowloonOrNT)) {
+    // Option B: taxi. Highest possible fare, rounded up to nearest 50, x2 for round trip.
+    const oneWay = roundUpTo50(input.uberHighFare ?? 0)
+    taxiFare = oneWay * 2
+    option = 'B'
+  } else if (!isNightRate(hourHK) && input.onHKIslandMTR) {
+    // Option A: +50 flat, HK Island MTR station, 08:00-23:00 only
+    taxiFare = 50
+    option = 'A'
+  }
+
+  return { base, option, taxiFare, total: base + taxiFare, currency: 'HKD' }
+}
+
+export const NON_REFUNDABLE_NOTICE =
+  'This amount is not refundable, not transferable, and cannot be used to reschedule if any changes are made after acceptance.'
