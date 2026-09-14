@@ -1,0 +1,15 @@
+-- MilesHighClub schema
+-- Primary datastore: Cloudflare KV namespace MHC_KV (worker/index.ts).
+-- Keys:
+--   bookings   : JSON array of Booking (src/types.ts)
+--   customers  : JSON array of CustomerInfo (src/types.ts)
+--
+-- KV cannot hold SQL schema; this file documents the logical schema for
+-- reference. Booking rows are created via POST /api/bookings and status
+-- transitions via POST /api/bookings/:id/status (admin only).
+--
+-- Logical schema (KV JSON):
+-- Booking: { id: uuid, status: pending|accepted|rejected, telegramUserId: number,
+--            name, startISO: string, people: number, location: string,
+--            quote: QuoteResult }
+-- CustomerInfo: { telegramUserId: number, name, phone, address, unit, credits: number }
