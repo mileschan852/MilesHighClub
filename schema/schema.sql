@@ -1,15 +1,17 @@
--- MilesHighClub schema
--- Primary datastore: Cloudflare KV namespace MHC_KV (worker/index.ts).
--- Keys:
---   bookings   : JSON array of Booking (src/types.ts)
---   customers  : JSON array of CustomerInfo (src/types.ts)
+-- MilesHighClub schema (Supabase)
+-- Primary datastore: Supabase Postgres, project mesqxoujuxothdqjwhwd.
+-- Tables: users_list, bookings (managed in the Supabase dashboard).
 --
--- KV cannot hold SQL schema; this file documents the logical schema for
--- reference. Booking rows are created via POST /api/bookings and status
--- transitions via POST /api/bookings/:id/status (admin only).
+-- users_list: { telegram_id (pk), role, phone, address, unit, credits, created_at }
+-- bookings:   { id (uuid pk), customer_id -> users_list.telegram_id, start_time, end_time,
+--               pax, location, transport_option, quote_price, status, created_at }
 --
--- Logical schema (KV JSON):
--- Booking: { id: uuid, status: pending|accepted|rejected, telegramUserId: number,
---            name, startISO: string, people: number, location: string,
---            quote: QuoteResult }
--- CustomerInfo: { telegramUserId: number, name, phone, address, unit, credits: number }
+-- Access from the Mini App uses the anon key, so RLS must allow it.
+-- Run these in the Supabase SQL Editor if RLS is blocking reads/writes:
+
+-- If RLS is enabled on these tables, the anon role needs open policies for now
+-- (auth is Telegram-identity based in the app, not Supabase auth):
+-- alter table public.users_list enable row level security;
+-- alter table public.bookings   enable row level security;
+-- create policy "anon full access users" on public.users_list for all to anon using (true) with check (true);
+-- create policy "anon full access bookings" on public.bookings for all to anon using (true) with check (true);
