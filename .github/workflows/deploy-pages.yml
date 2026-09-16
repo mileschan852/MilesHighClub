@@ -27,7 +27,8 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_API_BASE: https://mileshighclub.mileschan852.workers.dev/api
+          VITE_SUPABASE_URL: https://mesqxoujuxothdqjwhwd.supabase.co
+          VITE_SUPABASE_ANON_KEY: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1lc3F4b3VqdXhvdGhkcWp3aHdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODkyMzg2MzYsImV4cCI6MjEwNDgxNDYzNn0.Zdhte4LWVN9Exn8wndu26u0nncgZZYe_7_lgO8d46fc
       - name: SPA fallback (404.html)
         run: cp dist/index.html dist/404.html
       - uses: actions/upload-pages-artifact@v3
