@@ -21,7 +21,7 @@ function Gate({ children }: { children: ReactNode }) {
 }
 
 export default function WalletGate({ children }: { children: ReactNode }) {
-  const manifestUrl = (import.meta as any).env.VITE_TONCONNECT_MANIFEST as string
+  const manifestUrl = `${window.location.origin}${window.location.pathname}tonconnect-manifest.json`
   return (
     <TonConnectUIProvider manifestUrl={manifestUrl}>
       <Gate>{children}</Gate>
