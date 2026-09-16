@@ -1,4 +1,4 @@
-export type Page = 'calendar' | 'map' | 'profile' | 'admin'
+export type Page = 'calendar' | 'map' | 'customers' | 'profile'
 
 export interface Booking {
   id: string

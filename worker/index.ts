@@ -31,7 +31,7 @@ export default {
 
     if (path === '/api/login' && req.method === 'POST') {
       await upsertCustomer(env, { telegramUserId: user.id, name: user.name })
-      return json({ id: user.id, name: user.name })
+      return json({ id: user.id, name: user.name, username: (user as any).username })
     }
 
     if (path === '/api/quote' && req.method === 'POST') {
@@ -109,7 +109,7 @@ async function verifyTelegram(req: Request, env: Env) {
   const computed = [...new Uint8Array(sig)].map((b) => b.toString(16).padStart(2, '0')).join('')
   if (computed !== hash) return null
   const u = JSON.parse(params.get('user') || '{}')
-  return { id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'user' }
+  return { id: u.id, name: [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'user', username: u.username }
 }
 
 async function isNight(startISO: string) {
