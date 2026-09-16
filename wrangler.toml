@@ -4,8 +4,12 @@ compatibility_date = "2026-01-01"
 
 [[kv_namespaces]]
 binding = "MHC_KV"
-id = "REPLACE_WITH_KV_NAMESPACE_ID"
+id = "51473a87c0c6452982a3a909de52b7ec"
 
 [vars]
 ADMIN_TELEGRAM_ID = "1231127407"
 # TELEGRAM_BOT_TOKEN and UBER_API_TOKEN go in `wrangler secret put ...`
+
+[assets]
+directory = "./dist"
+binding = "ASSETS"
