@@ -125,6 +125,17 @@ export const API = {
     if (error) throw new Error(error.message)
     return bookingToApp(data as DbBooking)
   },
+
+  async saveAdminLocation(lat: number, lng: number): Promise<void> {
+    const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user
+    const username = (u?.username ?? '').toLowerCase()
+    if (!username) throw new Error('no username')
+    const { error } = await supabase
+      .from('users_list')
+      .update({ last_lat: lat, last_lng: lng, last_loc_at: new Date().toISOString() })
+      .eq('username', username)
+    if (error) throw new Error(error.message)
+  },
 }
 
 export { calculateQuote }
