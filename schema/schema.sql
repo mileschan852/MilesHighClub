@@ -2,12 +2,18 @@
 -- Primary datastore: Supabase Postgres, project mesqxoujuxothdqjwhwd.
 -- Tables: users_list, bookings (managed in the Supabase dashboard).
 --
--- users_list: { telegram_id (pk), role, phone, address, unit, credits, created_at }
+-- users_list: { telegram_id, username (canonical identity, Telegram @username lowercase),
+--               role, phone, address, unit, credits, created_at }
 -- bookings:   { id (uuid pk), customer_id -> users_list.telegram_id, start_time, end_time,
 --               pax, location, transport_option, quote_price, status, created_at }
 --
 -- Access from the Mini App uses the anon key, so RLS must allow it.
 -- Run these in the Supabase SQL Editor if RLS is blocking reads/writes:
+
+-- Identity migration (2026-09-18): app now keys users by @username, not numeric user id.
+-- If not yet applied in the dashboard, run:
+-- alter table public.users_list add column if not exists username text;
+-- create unique index if not exists users_list_username_key on public.users_list (username);
 
 -- If RLS is enabled on these tables, the anon role needs open policies for now
 -- (auth is Telegram-identity based in the app, not Supabase auth):

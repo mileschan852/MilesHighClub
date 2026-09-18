@@ -29,8 +29,9 @@ function bookingToApp(row: DbBooking): Booking {
 
 function userToCustomer(row: DbUser): CustomerInfo {
   return {
+    username: row.username ?? '',
     telegramUserId: row.telegram_id,
-    name: row.role === 'admin' ? 'Admin' : `Customer ${row.telegram_id}`,
+    name: row.role === 'admin' ? 'Admin' : (row.username ? `@${row.username}` : `Customer ${row.telegram_id}`),
     phone: row.phone ?? '',
     address: row.address ?? '',
     unit: row.unit ?? '',
@@ -46,13 +47,15 @@ export const API = {
     const id = u.id
     const name = [u.first_name, u.last_name].filter(Boolean).join(' ') || u.username || 'user'
 
-    // Upsert into users_list so the admin's customer list sees everyone who logs in.
-    const { error } = await supabase.from('users_list').upsert(
-      { telegram_id: id, phone: null, address: null, unit: null, credits: 0 },
-      { onConflict: 'telegram_id', ignoreDuplicates: true },
-    )
+    // Upsert into users_list keyed by @username. The username column is the
+    // canonical identity; telegram_id is kept for legacy rows/back-reference.
+    const username = (u.username ?? '').toLowerCase()
+    if (!username) throw new Error('This Telegram account has no @username. Please set one in Telegram settings, then retry.')
+    const { error } = await supabase
+      .from('users_list')
+      .upsert({ username, telegram_id: id, phone: null, address: null, unit: null, credits: 0 }, { onConflict: 'username' })
     if (error) throw new Error(error.message)
-    return { id, name, username: u.username }
+    return { id, name, username }
   },
 
   async listBookings(): Promise<Booking[]> {
@@ -77,7 +80,7 @@ export const API = {
     const { error } = await supabase
       .from('users_list')
       .update({ phone: c.phone, address: c.address, unit: c.unit, credits: c.credits })
-      .eq('telegram_id', c.telegramUserId)
+      .eq('username', c.username)
     if (error) throw new Error(error.message)
     return c
   },

@@ -15,7 +15,10 @@ export interface Booking {
 }
 
 export interface CustomerInfo {
-  telegramUserId: number
+  // Identity is now the Telegram @username (no @). Rows created before the
+  // username column existed may only have telegramUserId set.
+  username: string
+  telegramUserId?: number
   name: string
   phone: string
   address: string

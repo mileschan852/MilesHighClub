@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react'
 import { CustomerInfo } from '../types'
 import { API } from '../api'
 
-export default function ProfilePage({ user }: { user: { id: number; name: string } }) {
+export default function ProfilePage({ user }: { user: { id: number; name: string; username?: string } }) {
   const [info, setInfo] = useState<CustomerInfo | null>(null)
 
   useEffect(() => {
-    API.listCustomers().then((all) => setInfo(all.find((c) => c.telegramUserId === user.id) ?? {
-      telegramUserId: user.id, name: user.name, phone: '', address: '', unit: '', credits: 0,
+    API.listCustomers().then((all) => setInfo(all.find((c) => c.username && c.username === (user.username ?? '').toLowerCase()) ?? {
+      username: (user.username ?? '').toLowerCase(), name: user.name, phone: '', address: '', unit: '', credits: 0,
     }))
-  }, [user.id])
+  }, [user.username])
 
   if (!info) return null
 

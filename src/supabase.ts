@@ -25,6 +25,7 @@ export interface DbBooking {
 
 export interface DbUser {
   telegram_id: number
+  username: string | null // canonical identity (Telegram @username, lowercase)
   role: string | null
   phone: string | null
   address: string | null

@@ -3,7 +3,7 @@ import { API } from '../api'
 import { useState } from 'react'
 
 // Admin page: 3rd bottom-nav button. Shows the customer list with an
-// "Add Customer" button on top (adds by Telegram user id). Tapping a
+// "Add Customer" button on top (adds by Telegram @username). Tapping a
 // customer shows their info.
 export default function AdminPage({ customers, onUpdate }: {
   customers: CustomerInfo[]
@@ -11,19 +11,21 @@ export default function AdminPage({ customers, onUpdate }: {
 }) {
   const [selected, setSelected] = useState<CustomerInfo | null>(null)
   const [adding, setAdding] = useState(false)
-  const [newId, setNewId] = useState('')
-  const [newName, setNewName] = useState('')
+  const [newUsername, setNewUsername] = useState('')
   const [err, setErr] = useState('')
 
+  function normalizeUsername(raw: string) {
+    return raw.trim().replace(/^@/, '').toLowerCase()
+  }
+
   async function addCustomer() {
-    const id = Number(newId)
-    if (!id || id <= 0) return setErr('Enter a valid Telegram user id (numbers only)')
-    if (customers.some((c) => c.telegramUserId === id)) return setErr('That customer is already on the list')
+    const username = normalizeUsername(newUsername)
+    if (!/^[a-z0-9_]{4,32}$/.test(username)) return setErr('Enter a valid Telegram @username (letters, numbers, underscores)')
+    if (customers.some((c) => c.username === username)) return setErr('That customer is already on the list')
     try {
-      await API.updateCustomer({ telegramUserId: id, name: newName.trim() || `Customer ${id}`, phone: '', address: '', unit: '', credits: 0 })
+      await API.updateCustomer({ username, name: `@${username}`, phone: '', address: '', unit: '', credits: 0 })
       setAdding(false)
-      setNewId('')
-      setNewName('')
+      setNewUsername('')
       setErr('')
       onUpdate()
     } catch (e: any) {
@@ -38,23 +40,22 @@ export default function AdminPage({ customers, onUpdate }: {
       {adding && (
         <div className="customer-editor">
           <h3>Add Customer</h3>
-          <input value={newId} onChange={(e) => setNewId(e.target.value)} placeholder="Telegram user id (e.g. 123456789)" inputMode="numeric" />
-          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name (optional)" />
+          <input value={newUsername} onChange={(e) => setNewUsername(e.target.value)} placeholder="@username (e.g. @ johndoe)" />
           <button onClick={addCustomer}>Save</button>
           <button onClick={() => { setAdding(false); setErr('') }}>Cancel</button>
         </div>
       )}
-      {customers.length === 0 && !adding && <p className="muted">No customers yet. Add one with their Telegram user id.</p>}
+      {customers.length === 0 && !adding && <p className="muted">No customers yet. Add one with their Telegram @username.</p>}
       {customers.map((c) => (
-        <button key={c.telegramUserId} className="customer-row" onClick={() => setSelected({ ...c })}>
-          👤 {c.name} · id {c.telegramUserId} · {c.credits} credits
+        <button key={c.username || c.telegramUserId} className="customer-row" onClick={() => setSelected({ ...c })}>
+          👤 {c.name} · {c.credits} credits
         </button>
       ))}
 
       {selected && (
         <div className="customer-editor">
           <h3>{selected.name}</h3>
-          <p className="muted">Telegram id: {selected.telegramUserId}</p>
+          <p className="muted">Telegram: @{selected.username || selected.telegramUserId}</p>
           <input value={selected.phone} onChange={(e) => setSelected({ ...selected, phone: e.target.value })} placeholder="Phone" />
           <input value={selected.address} onChange={(e) => setSelected({ ...selected, address: e.target.value })} placeholder="Address" />
           <input value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} placeholder="Unit" />

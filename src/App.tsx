@@ -8,8 +8,7 @@ import WalletGate from './components/WalletGate'
 import { API } from './api'
 
 // Admin access: these Telegram usernames (case-insensitive) unlock admin mode.
-const ADMIN_USERNAMES = ['mileschan852', 'hkmemberonly']
-const ADMIN_IDS: number[] = []
+const ADMIN_USERNAMES = ['mileschan852', 'hkmembersonly']
 
 export default function App() {
   const [page, setPage] = useState<Page>('calendar')
@@ -22,7 +21,7 @@ export default function App() {
   }, [])
 
   const isAdmin =
-    !!user && (ADMIN_IDS.includes(user.id) || ADMIN_USERNAMES.includes((user.username ?? '').toLowerCase()))
+    !!user && ADMIN_USERNAMES.includes((user.username ?? '').toLowerCase())
 
   useEffect(() => {
     if (!user) return
@@ -32,8 +31,8 @@ export default function App() {
 
   if (!user) return <div className="login">Logging in with Telegram...</div>
 
-  // Calendar is gated: only admins and customers present on the admin's list may enter.
-  const canEnterCalendar = isAdmin || customers.some((c) => c.telegramUserId === user.id)
+  // Calendar is gated: only admins and customers present on the admin's list (matched by @username) may enter.
+  const canEnterCalendar = isAdmin || customers.some((c) => c.username && c.username === (user.username ?? '').toLowerCase())
 
   return (
     <div className="app">
