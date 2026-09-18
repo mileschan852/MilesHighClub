@@ -3,6 +3,9 @@ import { Booking, CustomerInfo } from './types'
 import { calculateQuote, QuoteResult } from './pricing'
 import { DbBooking, DbUser } from './supabase'
 
+// Same admin list as App.tsx (usernames are stored lowercase).
+const ADMIN_USERNAMES = ['mileschan852', 'hkmembersonly']
+
 // ---- mappers: DB rows <-> app types ----
 
 function bookingToApp(row: DbBooking): Booking {
@@ -51,10 +54,27 @@ export const API = {
     // canonical identity; telegram_id is kept for legacy rows/back-reference.
     const username = (u.username ?? '').toLowerCase()
     if (!username) throw new Error('This Telegram account has no @username. Please set one in Telegram settings, then retry.')
-    const { error } = await supabase
+    const isAdminName = ADMIN_USERNAMES.includes(username)
+
+    // Robust identity save: select-then-update-or-insert so it works whether or
+    // not the unique index on username exists (avoids users_list_pkey conflicts).
+    const { data: existing } = await supabase
       .from('users_list')
-      .upsert({ username, telegram_id: id, phone: null, address: null, unit: null, credits: 0 }, { onConflict: 'username' })
-    if (error) throw new Error(error.message)
+      .select('telegram_id, username')
+      .or(`username.eq.${username},telegram_id.eq.${id}`)
+      .maybeSingle()
+    if (existing) {
+      const { error } = await supabase
+        .from('users_list')
+        .update({ username, telegram_id: id, ...(isAdminName ? { role: 'admin' } : {}) })
+        .eq('telegram_id', existing.telegram_id)
+      if (error) throw new Error(error.message)
+    } else {
+      const { error } = await supabase
+        .from('users_list')
+        .insert({ username, telegram_id: id, phone: null, address: null, unit: null, credits: 0, ...(isAdminName ? { role: 'admin' } : {}) })
+      if (error) throw new Error(error.message)
+    }
     return { id, name, username }
   },
 
