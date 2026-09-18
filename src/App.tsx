@@ -13,11 +13,16 @@ const ADMIN_USERNAMES = ['mileschan852', 'hkmembersonly']
 export default function App() {
   const [page, setPage] = useState<Page>('calendar')
   const [user, setUser] = useState<{ id: number; name: string; username?: string } | null>(null)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [customers, setCustomers] = useState<CustomerInfo[]>([])
 
   useEffect(() => {
-    API.getLogin().then(setUser)
+    API.getLogin().then(setUser).catch((e: unknown) => {
+      const msg = e instanceof Error ? e.message : String(e)
+      console.error('login failed:', msg)
+      setLoginError(msg || 'Unknown login error')
+    })
   }, [])
 
   const isAdmin =
@@ -29,7 +34,9 @@ export default function App() {
     if (isAdmin) API.listCustomers().then(setCustomers)
   }, [user, isAdmin])
 
-  if (!user) return <div className="login">Logging in with Telegram...</div>
+  if (!user) return loginError
+    ? <div className="login">⚠️ Login failed: {loginError}<br /><br />Fully close and reopen the app in Telegram, then retry.</div>
+    : <div className="login">Logging in with Telegram...</div>
 
   // Calendar is gated: only admins and customers present on the admin's list (matched by @username) may enter.
   const canEnterCalendar = isAdmin || customers.some((c) => c.username && c.username === (user.username ?? '').toLowerCase())
