@@ -105,6 +105,25 @@ export const API = {
     return c
   },
 
+  async addCustomer(username: string): Promise<CustomerInfo> {
+    // Insert a fresh row. select-then-insert so it also works when the row
+    // exists but only has telegram_id set (pre-username legacy rows).
+    const { data: existing, error: selErr } = await supabase
+      .from('users_list')
+      .select('*')
+      .eq('username', username)
+      .maybeSingle()
+    if (selErr) throw new Error(selErr.message)
+    if (existing) return userToCustomer(existing as DbUser)
+    const { data, error } = await supabase
+      .from('users_list')
+      .insert({ username, phone: null, address: null, unit: null, credits: 0 })
+      .select()
+      .single()
+    if (error) throw new Error(error.message)
+    return userToCustomer(data as DbUser)
+  },
+
   async setBookingStatus(id: string, status: 'accepted' | 'rejected'): Promise<Booking> {
     const { data, error } = await supabase
       .from('bookings')

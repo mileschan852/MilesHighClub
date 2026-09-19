@@ -23,7 +23,7 @@ export default function AdminPage({ customers, onUpdate }: {
     if (!/^[a-z0-9_]{4,32}$/.test(username)) return setErr('Enter a valid Telegram @username (letters, numbers, underscores)')
     if (customers.some((c) => c.username === username)) return setErr('That customer is already on the list')
     try {
-      await API.updateCustomer({ username, name: `@${username}`, phone: '', address: '', unit: '', credits: 0 })
+      await API.addCustomer(username)
       setAdding(false)
       setNewUsername('')
       setErr('')
