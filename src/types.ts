@@ -25,6 +25,7 @@ export interface CustomerInfo {
   streetName: string
   address: string // combined street number + name (legacy / display)
   unit: string
+  passcode: string
   credits: number
   surcharge: number // admin-only extra added to quotes
 }

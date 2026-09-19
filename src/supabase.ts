@@ -33,6 +33,7 @@ export interface DbUser {
   street_name: string | null
   address: string | null
   unit: string | null
+  passcode: string | null
   credits: number | null
   surcharge: number | null
   created_at: string

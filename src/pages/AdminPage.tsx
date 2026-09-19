@@ -58,7 +58,7 @@ export default function AdminPage({ customers, onUpdate }: {
       {customers.length === 0 && !adding && <p className="muted">No customers yet. Add one with their Telegram @username.</p>}
       {customers.map((c) => (
         <button key={c.username || c.telegramUserId} className="customer-row" onClick={() => setSelected({ ...c })}>
-          👤 {c.name} · {c.credits} credits
+          👤 {c.name} · {c.credits} credits · PassCode: {c.passcode || '-'} · Unit: {c.unit || '-'} · {c.streetNumber || '-'} {c.streetName || ''}{c.streetNumber || c.streetName ? ' St' : ''}
         </button>
       ))}
 
@@ -72,7 +72,10 @@ export default function AdminPage({ customers, onUpdate }: {
             {field('Street no.', selected.streetNumber, (v) => setSelected({ ...selected, streetNumber: v }))}
             {field('Street name', selected.streetName, (v) => setSelected({ ...selected, streetName: v }))}
           </div>
-          {field('Unit', selected.unit, (v) => setSelected({ ...selected, unit: v }))}
+          <div className="field-row">
+            {field('Unit', selected.unit, (v) => setSelected({ ...selected, unit: v }))}
+            {field('PassCode', selected.passcode, (v) => setSelected({ ...selected, passcode: v }))}
+          </div>
           <label className="field">
             <span className="field-label">Credits</span>
             <span className="field-value">{selected.credits} credits left</span>
