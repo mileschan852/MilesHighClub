@@ -31,8 +31,14 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return
-    API.listBookings().then(setBookings)
-    if (isAdmin) API.listCustomers().then(setCustomers)
+    API.listBookings().then(setBookings).catch((e: unknown) => {
+      console.error('bookings load failed:', e instanceof Error ? e.message : e)
+    })
+    // Everyone needs the customer list: it is the calendar gate for non-admins.
+    API.listCustomers().then(setCustomers).catch((e: unknown) => {
+      console.error('customers load failed:', e instanceof Error ? e.message : e)
+      setLoginError('Could not load your account data: ' + (e instanceof Error ? e.message : String(e)))
+    })
   }, [user, isAdmin])
 
   // Admin background location tracking: starts at login, keeps running while
