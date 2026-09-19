@@ -29,24 +29,31 @@ export function roundUpTo50(n: number): number {
   return Math.ceil(n / 50) * 50
 }
 
+// Fixed transport rates by district (day only, 08:00-23:00).
+// Night (23:01-07:59) always uses taxi = Uber price x 2.
+export function districtTransport(hkIsland: boolean, klnOrNT: boolean): number {
+  return hkIsland ? 50 : klnOrNT ? 100 : 100 // unknown district defaults to KLN/NT rate
+}
+
 export function calculateQuote(input: QuoteInput): QuoteResult {
   const start = new Date(input.startISO)
   const hourHK = (start.getUTCHours() + 8) % 24 // Hong Kong = UTC+8
 
-  const perPerson = isNightRate(hourHK) ? 350 : 250
+  const night = isNightRate(hourHK)
+  const perPerson = night ? 350 : 250
   const base = perPerson * input.people
 
-  let option: QuoteResult['option'] = 'NONE'
-  let taxiFare = 0
+  let option: QuoteResult['option']
+  let taxiFare: number
 
-  if (input.requestTaxi || (isNightRate(hourHK) && input.inKowloonOrNT)) {
-    // Option B: taxi. Highest possible fare, rounded up to nearest 50, x2 for round trip.
+  if (night) {
+    // Night: taxi = Uber estimate x 2 (round trip).
     const oneWay = roundUpTo50(input.uberHighFare ?? 0)
     taxiFare = oneWay * 2
     option = 'B'
-  } else if (!isNightRate(hourHK) && input.onHKIslandMTR) {
-    // Option A: +50 flat, HK Island MTR station, 08:00-23:00 only
-    taxiFare = 50
+  } else {
+    // Day: flat transport, 50 HK Island / 100 KLN+NT.
+    taxiFare = districtTransport(input.onHKIslandMTR, input.inKowloonOrNT)
     option = 'A'
   }
 

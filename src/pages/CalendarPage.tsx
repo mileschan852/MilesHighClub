@@ -135,11 +135,21 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
     setAddressName(me?.streetName ?? '')
   }, [showForm])
 
+  // Guess district from the street name text so transport pricing applies.
+  const HK_ISLAND_STREETS = ['causeway bay', 'wan chai', 'central', 'sheung wan', 'admiralty', 'happy valley', 'north point', 'quarry bay', 'taikoo', 'shau kei wan', 'chai wan', 'aberdeen', 'ap lei chau', 'pok fu lam', 'mid-levels', 'kennedy town', 'sai ying pun', 'soho', 'tai hang', 'braemar', 'stubbs road', 'repulse bay', 'stanley', 'wong chuk hang', 'sham wan', ' Jardine', ' Hennessey', ' Gloucester', ' Hennessy', ' Wellington', ' Queen\'s', ' Des Voeux', ' Connaught', ' Catchick']
+
+  function detectDistrict(text: string): { hkIsland: boolean; klnOrNT: boolean } {
+    const t = text.toLowerCase()
+    if (HK_ISLAND_STREETS.some((s) => t.includes(s))) return { hkIsland: true, klnOrNT: false }
+    return { hkIsland: false, klnOrNT: true }
+  }
+
   async function getQuote() {
     if (!picked) return setErr('Pick a time slot first')
     const address = [addressNo, addressName].filter(Boolean).join(' ')
+    const district = detectDistrict(address)
     try {
-      const q = await API.previewQuote({ startISO: picked.toISOString(), people, location: address, onHKIslandMTR: false, inKowloonOrNT: false, requestTaxi: false })
+      const q = await API.previewQuote({ startISO: picked.toISOString(), people, location: address, onHKIslandMTR: district.hkIsland, inKowloonOrNT: district.klnOrNT, requestTaxi: false })
       // Customer surcharge (set by admin) is added on top of the quote.
       const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
       const surcharge = me?.surcharge ?? 0
