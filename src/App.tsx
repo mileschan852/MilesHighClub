@@ -39,7 +39,16 @@ export default function App() {
     : <div className="login">Logging in with Telegram...</div>
 
   // Calendar is gated: only admins and customers present on the admin's list (matched by @username) may enter.
+  // A user not on the list is kept on the loading page with no nav, unable to proceed.
   const canEnterCalendar = isAdmin || customers.some((c) => c.username && c.username === (user.username ?? '').toLowerCase())
+
+  if (!canEnterCalendar) {
+    return (
+      <div className="app">
+        <div className="login">Loading...</div>
+      </div>
+    )
+  }
 
   return (
     <div className="app">

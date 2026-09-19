@@ -21,6 +21,10 @@ button { cursor: pointer; }
 .field { display: flex; align-items: center; gap: 10px; }
 .field-label { flex: 0 0 130px; font-size: 13px; color: #bbb; }
 .field input { flex: 1; }
+.field-row { display: flex; gap: 10px; }
+.field-row .field { flex: 1; }
+.field-row .field-label { flex: 0 0 auto; min-width: 70px; }
+.field-value { flex: 1; font-size: 14px; color: #eee; }
 .add-customer { padding: 10px 16px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #555; background: #222; color: #eee; }
 .locked { text-align: center; padding: 60px 0; color: #aaa; }
 .muted { color: #888; font-size: 13px; }

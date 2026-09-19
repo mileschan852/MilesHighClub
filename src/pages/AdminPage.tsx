@@ -68,10 +68,15 @@ export default function AdminPage({ customers, onUpdate }: {
           <p className="muted">Telegram: @{selected.username || selected.telegramUserId}</p>
           {field('Name', selected.name, (v) => setSelected({ ...selected, name: v }))}
           {field('Phone number', selected.phone, (v) => setSelected({ ...selected, phone: v }))}
-          {field('Street number', selected.streetNumber, (v) => setSelected({ ...selected, streetNumber: v }))}
-          {field('Street name', selected.streetName, (v) => setSelected({ ...selected, streetName: v }))}
+          <div className="field-row">
+            {field('Street no.', selected.streetNumber, (v) => setSelected({ ...selected, streetNumber: v }))}
+            {field('Street name', selected.streetName, (v) => setSelected({ ...selected, streetName: v }))}
+          </div>
           {field('Unit', selected.unit, (v) => setSelected({ ...selected, unit: v }))}
-          {field('Credits', selected.credits, (v) => setSelected({ ...selected, credits: +v || 0 }), 'number')}
+          <label className="field">
+            <span className="field-label">Credits</span>
+            <span className="field-value">{selected.credits} credits left</span>
+          </label>
           {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
           <button onClick={async () => { await API.updateCustomer(selected); setSelected(null); onUpdate() }}>Save</button>
           <button onClick={() => setSelected(null)}>Close</button>
