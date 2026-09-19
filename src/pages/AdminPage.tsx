@@ -1,5 +1,6 @@
 import { Booking, CustomerInfo } from '../types'
 import { API } from '../api'
+import { UNIQUE_MTR_STATIONS } from '../mtr'
 import { useState } from 'react'
 
 // Admin page: 3rd bottom-nav button. Shows the customer list with an
@@ -58,7 +59,7 @@ export default function AdminPage({ customers, onUpdate }: {
       {customers.length === 0 && !adding && <p className="muted">No customers yet. Add one with their Telegram @username.</p>}
       {customers.map((c) => (
         <button key={c.username || c.telegramUserId} className="customer-row" onClick={() => setSelected({ ...c })}>
-          👤 {c.name} · {c.credits} credits · PassCode: {c.passcode || '-'} · Unit: {c.unit || '-'} · {c.streetNumber || '-'} {c.streetName || ''}{c.streetNumber || c.streetName ? ' St' : ''}
+          👤 {c.name} · {c.credits} credits · PassCode: {c.passcode || '-'} · Unit: {c.unit || '-'} · {c.streetNumber || '-'} {c.streetName || ''}{c.streetNumber || c.streetName ? ' St' : ''} · MTR: {c.closestMtr || '-'}
         </button>
       ))}
 
@@ -74,6 +75,13 @@ export default function AdminPage({ customers, onUpdate }: {
               <input className="short" maxLength={6} placeholder="No." value={selected.streetNumber} onChange={(e) => setSelected({ ...selected, streetNumber: e.target.value })} />
               <input className="long" placeholder="Street name" value={selected.streetName} onChange={(e) => setSelected({ ...selected, streetName: e.target.value })} />
             </span>
+          </label>
+          <label className="field">
+            <span className="field-label">Closest MTR</span>
+            <select value={selected.closestMtr} onChange={(e) => setSelected({ ...selected, closestMtr: e.target.value })}>
+              <option value="">Select MTR station</option>
+              {UNIQUE_MTR_STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+            </select>
           </label>
           <label className="field duo">
             <span className="field-label">Unit / PassCode</span>

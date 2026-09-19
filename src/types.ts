@@ -28,4 +28,5 @@ export interface CustomerInfo {
   passcode: string
   credits: number
   surcharge: number // admin-only extra added to quotes
+  closestMtr: string // closest MTR station, part of the address
 }

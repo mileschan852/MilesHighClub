@@ -45,6 +45,7 @@ function userToCustomer(row: DbUser): CustomerInfo {
     passcode: row.passcode ?? '',
     credits: row.credits ?? 0,
     surcharge: row.surcharge ?? 0,
+    closestMtr: row.closest_mtr ?? '',
   }
 }
 
@@ -105,7 +106,7 @@ export const API = {
   async updateCustomer(c: CustomerInfo): Promise<CustomerInfo> {
     const { error } = await supabase
       .from('users_list')
-      .update({ name: c.name || null, phone: c.phone, street_number: c.streetNumber, street_name: c.streetName, address: c.address, unit: c.unit, passcode: c.passcode, credits: c.credits, surcharge: c.surcharge })
+      .update({ name: c.name || null, phone: c.phone, street_number: c.streetNumber, street_name: c.streetName, address: c.address, unit: c.unit, passcode: c.passcode, credits: c.credits, surcharge: c.surcharge, closest_mtr: (c.closestMtr || null) })
       .eq('username', c.username)
     if (error) throw new Error(error.message)
     return c
@@ -123,7 +124,7 @@ export const API = {
     if (existing) return userToCustomer(existing as DbUser)
     const { data, error } = await supabase
       .from('users_list')
-      .insert({ username, name: null, phone: null, street_number: null, street_name: null, address: null, unit: null, passcode: null, credits: 0, surcharge: 0 })
+      .insert({ username, name: null, phone: null, street_number: null, street_name: null, address: null, unit: null, passcode: null, credits: 0, surcharge: 0, closest_mtr: null })
       .select()
       .single()
     if (error) throw new Error(error.message)

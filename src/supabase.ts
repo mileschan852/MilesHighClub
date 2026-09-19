@@ -36,5 +36,6 @@ export interface DbUser {
   passcode: string | null
   credits: number | null
   surcharge: number | null
+  closest_mtr: string | null
   created_at: string
 }
