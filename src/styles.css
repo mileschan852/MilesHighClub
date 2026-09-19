@@ -22,6 +22,11 @@ button { cursor: pointer; }
 .field-label { flex: 0 0 130px; font-size: 13px; color: #bbb; }
 .field input { flex: 1; }
 .field-row { display: flex; gap: 10px; }
+.field.duo .short { flex: 0 0 72px; min-width: 0; }
+.field.duo .long { flex: 1 1 0; min-width: 0; }
+.field.duo .half { flex: 1 1 0; min-width: 0; }
+.field.duo .field-label { flex: 0 0 130px; }
+
 .field-row .field { flex: 1; }
 .field-row .field-label { flex: 0 0 auto; min-width: 70px; }
 .field-value { flex: 1; font-size: 14px; color: #eee; }

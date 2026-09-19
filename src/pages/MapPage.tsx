@@ -9,7 +9,7 @@ import { API } from '../api'
 //   saving the location while the page is open.
 // - Customers: unlocked only from 1 hour before an accepted booking until it
 //   ends. Shows Miles' (admin's) last saved location.
-export default function MapPage({ bookings, isAdmin }: { bookings: { status: string; startISO: string }[]; isAdmin: boolean; username?: string }) {
+export default function MapPage({ bookings, isAdmin, adminPos }: { bookings: { status: string; startISO: string }[]; isAdmin: boolean; username?: string; adminPos?: { lat: number; lng: number; at: string } | null }) {
   const now = Date.now()
   const active =
     isAdmin ||
@@ -19,40 +19,34 @@ export default function MapPage({ bookings, isAdmin }: { bookings: { status: str
       return now >= start - 3600_000 && now <= start + 3600_000
     })
 
-  const [pos, setPos] = useState<{ lat: number; lng: number; at: string } | null>(null)
+  const [saved, setSaved] = useState<{ lat: number; lng: number; at: string } | null>(null)
   const [err, setErr] = useState('')
-  const savedRef = useRef(false)
   const mapDivRef = useRef<HTMLDivElement | null>(null)
   const mapRef = useRef<L.Map | null>(null)
   const markerRef = useRef<L.CircleMarker | null>(null)
+
+  // The position shown: the live background fix when available, otherwise
+  // the last location stored in the DB (so the map renders immediately).
+  const pos = adminPos ?? saved
 
   // Customer view: load the admin's last known location.
   useEffect(() => {
     if (!active || isAdmin) return
     API.getAdminLocation()
       .then((p) => {
-        if (p) setPos(p)
+        if (p) setSaved(p)
         else setErr('No location saved yet')
       })
       .catch((e: any) => setErr(e.message || 'Could not load location'))
   }, [active, isAdmin])
 
-  // Admin view: device geolocation, saved to the DB (once per visit, retried if it failed).
+  // Admin view: load the stored location instantly so the map shows on open;
+  // live updates arrive via the background watcher in App.tsx (adminPos).
   useEffect(() => {
     if (!active || !isAdmin) return
-    if (!('geolocation' in navigator)) { setErr('Geolocation not supported on this device'); return }
-    navigator.geolocation.getCurrentPosition(
-      (p) => {
-        const at = new Date().toISOString()
-        setPos({ lat: p.coords.latitude, lng: p.coords.longitude, at })
-        if (!savedRef.current) {
-          savedRef.current = true
-          API.saveAdminLocation(p.coords.latitude, p.coords.longitude).catch((e: any) => console.warn('save location failed', e))
-        }
-      },
-      (e) => setErr(e.message || 'Location permission denied'),
-      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
-    )
+    API.getAdminLocation()
+      .then((p) => p && setSaved(p))
+      .catch(() => {})
   }, [active, isAdmin])
 
   // Create the Leaflet map once we have a position.

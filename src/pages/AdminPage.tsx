@@ -68,14 +68,16 @@ export default function AdminPage({ customers, onUpdate }: {
           <p className="muted">Telegram: @{selected.username || selected.telegramUserId}</p>
           {field('Name', selected.name, (v) => setSelected({ ...selected, name: v }))}
           {field('Phone number', selected.phone, (v) => setSelected({ ...selected, phone: v }))}
-          <div className="field-row">
-            {field('Street no.', selected.streetNumber, (v) => setSelected({ ...selected, streetNumber: v }))}
-            {field('Street name', selected.streetName, (v) => setSelected({ ...selected, streetName: v }))}
-          </div>
-          <div className="field-row">
-            {field('Unit', selected.unit, (v) => setSelected({ ...selected, unit: v }))}
-            {field('PassCode', selected.passcode, (v) => setSelected({ ...selected, passcode: v }))}
-          </div>
+          <label className="field duo">
+            <span className="field-label">Street no / name</span>
+            <input className="short" value={selected.streetNumber} onChange={(e) => setSelected({ ...selected, streetNumber: e.target.value })} />
+            <input className="long" value={selected.streetName} onChange={(e) => setSelected({ ...selected, streetName: e.target.value })} />
+          </label>
+          <label className="field duo">
+            <span className="field-label">Unit / PassCode</span>
+            <input className="half" value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} />
+            <input className="half" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
+          </label>
           <label className="field">
             <span className="field-label">Credits</span>
             <span className="field-value">{selected.credits} credits left</span>

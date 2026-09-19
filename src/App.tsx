@@ -16,6 +16,7 @@ export default function App() {
   const [loginError, setLoginError] = useState<string | null>(null)
   const [bookings, setBookings] = useState<Booking[]>([])
   const [customers, setCustomers] = useState<CustomerInfo[]>([])
+  const [adminPos, setAdminPos] = useState<{ lat: number; lng: number; at: string } | null>(null)
 
   useEffect(() => {
     API.getLogin().then(setUser).catch((e: unknown) => {
@@ -32,6 +33,28 @@ export default function App() {
     if (!user) return
     API.listBookings().then(setBookings)
     if (isAdmin) API.listCustomers().then(setCustomers)
+  }, [user, isAdmin])
+
+  // Admin background location tracking: starts at login, keeps running while
+  // the app is open (even off the map page), and saves to the DB at most once
+  // a minute. The latest position is handed to the map page instantly.
+  useEffect(() => {
+    if (!user || !isAdmin) return
+    if (!('geolocation' in navigator)) return
+    let lastSave = 0
+    const watchId = navigator.geolocation.watchPosition(
+      (p) => {
+        setAdminPos({ lat: p.coords.latitude, lng: p.coords.longitude, at: new Date().toISOString() })
+        const now = Date.now()
+        if (now - lastSave > 60_000) {
+          lastSave = now
+          API.saveAdminLocation(p.coords.latitude, p.coords.longitude).catch(() => {})
+        }
+      },
+      () => {},
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 15000 },
+    )
+    return () => navigator.geolocation.clearWatch(watchId)
   }, [user, isAdmin])
 
   if (!user) return loginError
@@ -66,7 +89,7 @@ export default function App() {
             </div>
           )
         )}
-        {page === 'map' && <MapPage bookings={bookings} isAdmin={isAdmin} username={user.username} />}
+        {page === 'map' && <MapPage bookings={bookings} isAdmin={isAdmin} username={user.username} adminPos={adminPos} />}
         {page === 'profile' && <ProfilePage user={user} />}
         <nav className="bottom-nav">
           <button onClick={() => setPage('calendar')}>📅 Calendar</button>
