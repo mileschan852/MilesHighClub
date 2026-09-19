@@ -16,7 +16,14 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
   return (
     <div className="profile">
       <h2>Your info</h2>
-      <input value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} placeholder="Phone number" />
+      <label className="field">
+        <span className="field-label">Name</span>
+        <input value={info.name ?? ''} onChange={(e) => setInfo({ ...info, name: e.target.value })} />
+      </label>
+      <label className="field">
+        <span className="field-label">Phone number</span>
+        <input value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} />
+      </label>
       <label className="field duo">
         <span className="field-label">Street no / name</span>
         <span className="inputs">
@@ -31,7 +38,7 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
           <input className="half" placeholder="PassCode" value={info.passcode} onChange={(e) => setInfo({ ...info, passcode: e.target.value })} />
         </span>
       </label>
-      <p>Credits: {info.credits} (managed by Miles)</p>
+      <p>{info.credits} credits left</p>
       <button onClick={() => API.updateCustomer(info)}>Save</button>
     </div>
   )
