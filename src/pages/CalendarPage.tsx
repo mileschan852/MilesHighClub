@@ -57,12 +57,11 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
   const [showForm, setShowForm] = useState(false)
   const [people, setPeople] = useState(1)
   const [location, setLocation] = useState('')
-  const [phone, setPhone] = useState('')
-  const [address, setAddress] = useState('')
-  const [unit, setUnit] = useState('')
-  const [onHKIslandMTR, setHK] = useState(false)
-  const [inKowloonOrNT, setKLN] = useState(false)
-  const [requestTaxi, setTaxi] = useState(false)
+  // Booking form: only people + street no/name are asked. Street fields are
+  // pre-filled from the customer's saved address (editable). Other fields
+  // (phone/unit etc.) ride along from the saved profile silently.
+  const [addressNo, setAddressNo] = useState('')
+  const [addressName, setAddressName] = useState('')
   const [quote, setQuote] = useState<any>(null)
   const [err, setErr] = useState('')
 
@@ -127,10 +126,20 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
     }
   }
 
+  // Pre-fill the booking street fields from the customer's saved profile
+  // address each time the form opens (still editable).
+  useEffect(() => {
+    if (!showForm) return
+    const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
+    setAddressNo(me?.streetNumber ?? '')
+    setAddressName(me?.streetName ?? '')
+  }, [showForm])
+
   async function getQuote() {
     if (!picked) return setErr('Pick a time slot first')
+    const address = [addressNo, addressName].filter(Boolean).join(' ')
     try {
-      const q = await API.previewQuote({ startISO: picked.toISOString(), people, location, onHKIslandMTR, inKowloonOrNT, requestTaxi })
+      const q = await API.previewQuote({ startISO: picked.toISOString(), people, location: address, onHKIslandMTR: false, inKowloonOrNT: false, requestTaxi: false })
       // Customer surcharge (set by admin) is added on top of the quote.
       const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
       const surcharge = me?.surcharge ?? 0
@@ -146,8 +155,10 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
     await API.createBooking({
       telegramUserId: user.id,
       name: user.name,
-      phone, address, unit,
-      people, location,
+      phone: customers.find((c) => c.username === (user.username ?? '').toLowerCase())?.phone ?? '',
+      address: [addressNo, addressName].filter(Boolean).join(' '),
+      unit: customers.find((c) => c.username === (user.username ?? '').toLowerCase())?.unit ?? '',
+      people, location: [addressNo, addressName].filter(Boolean).join(' '),
       startISO: picked.toISOString(),
       quote,
     })
@@ -253,14 +264,17 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
         <div className="modal-backdrop" onClick={() => setShowForm(false)}>
           <form className="modal" onClick={(e) => e.stopPropagation()} onSubmit={(e) => { e.preventDefault(); getQuote() }}>
             <h3>Booking {picked.toLocaleString('en-HK')} (1 hour)</h3>
-            <input type="number" min={1} value={people} onChange={(e) => setPeople(+e.target.value)} placeholder="Number of people" />
-            <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="Phone number" required />
-            <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="Address" required />
-            <input value={unit} onChange={(e) => setUnit(e.target.value)} placeholder="Unit number" />
-            <input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="Meeting location" required />
-            <label><input type="checkbox" checked={onHKIslandMTR} onChange={(e) => setHK(e.target.checked)} /> On Hong Kong Island MTR station</label>
-            <label><input type="checkbox" checked={inKowloonOrNT} onChange={(e) => setKLN(e.target.checked)} /> Kowloon / New Territories</label>
-            <label><input type="checkbox" checked={requestTaxi} onChange={(e) => setTaxi(e.target.checked)} /> Request taxi</label>
+            <label className="field">
+              <span className="field-label">Number of people</span>
+              <input className="long" type="number" min={1} value={people} onChange={(e) => setPeople(+e.target.value)} placeholder="Number of people" required />
+            </label>
+            <label className="field duo">
+              <span className="field-label">Street no / name</span>
+              <span className="inputs">
+                <input className="short" maxLength={6} placeholder="No." value={addressNo} onChange={(e) => setAddressNo(e.target.value)} required />
+                <input className="long" placeholder="Street name" value={addressName} onChange={(e) => setAddressName(e.target.value)} required />
+              </span>
+            </label>
             <button type="submit">Get Quote</button>
             <button type="button" onClick={() => setShowForm(false)}>Cancel</button>
           </form>
