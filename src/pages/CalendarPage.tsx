@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Booking } from '../types'
 import { API } from '../api'
 import { NON_REFUNDABLE_NOTICE } from '../pricing'
@@ -7,7 +7,7 @@ const BOOKING_MS = 60 * 60 * 1000 // booking occupies 1 hour
 const MIN_LEAD_MS = 60 * 60 * 1000 // must book at least 1 hour ahead
 
 const DAY_START_HOUR = 0
-const SLOT_MINUTES = 30
+const SLOT_MINUTES = 15 // 15-minute time blocks
 const PX_PER_MIN = 1.4 // hour row = 84px
 
 interface DayBooking {
@@ -130,6 +130,13 @@ export default function CalendarPage({ bookings, user, onBooked }: { bookings: B
   const hours = Array.from({ length: 24 }, (_, h) => h)
   const nowTop = isToday ? ((now.getHours() * 60 + now.getMinutes()) * PX_PER_MIN) : null
 
+  // Auto-scroll the grid so the current time block is at the top when opening the calendar.
+  const gridWrapRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!isToday || nowTop === null || !gridWrapRef.current) return
+    gridWrapRef.current.scrollTop = Math.max(nowTop - 8, 0)
+  }, [isToday, nowTop])
+
   return (
     <div className="calendar dayview">
       <div className="dayview-header">
@@ -139,7 +146,7 @@ export default function CalendarPage({ bookings, user, onBooked }: { bookings: B
         <button onClick={() => shiftDay(1)}>Next ›</button>
       </div>
 
-      <div className="dayview-grid-wrap">
+      <div className="dayview-grid-wrap" ref={gridWrapRef}>
         <div className="dayview-hours">
           {hours.map((h) => (
             <div key={h} className="dayview-hour-label" style={{ height: 60 * PX_PER_MIN }}>
@@ -185,7 +192,7 @@ export default function CalendarPage({ bookings, user, onBooked }: { bookings: B
           )}
         </div>
       </div>
-      <p className="dayview-hint">Tap an empty hour to book (1 hour block, min 1h ahead).</p>
+      <p className="dayview-hint">Tap an empty slot to book (15-min blocks, 1 hour per booking, min 1h ahead).</p>
 
       {picked && !quote && (
         <form onSubmit={(e) => { e.preventDefault(); getQuote() }}>
