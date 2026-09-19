@@ -175,6 +175,74 @@ export const API = {
       .eq('username', username)
     if (error) throw new Error(error.message)
   },
+
+  // Customer map view: the admin's (Miles') last saved location.
+  async getAdminLocation(): Promise<{ lat: number; lng: number; at: string } | null> {
+    const { data, error } = await supabase
+      .from('users_list')
+      .select('last_lat, last_lng, last_loc_at')
+      .in('role', ['admin'])
+      .order('last_loc_at', { ascending: false, nullsFirst: false })
+      .limit(1)
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    if (!data || data.last_lat == null || data.last_lng == null) return null
+    return { lat: data.last_lat, lng: data.last_lng, at: data.last_loc_at ?? '' }
+  },
+
+  // Admin booking: occupy the slot immediately ("not available" on the
+  // calendar). Stored as a blocked booking with status 'blocked'.
+  async createBlockBooking(args: { startISO: string }): Promise<Booking> {
+    const start = new Date(args.startISO)
+    const end = new Date(start.getTime() + 60 * 60 * 1000)
+    const row = {
+      customer_id: 0,
+      start_time: start.toISOString(),
+      end_time: end.toISOString(),
+      pax: 0,
+      location: 'blocked by admin',
+      transport_option: null,
+      quote_price: 0,
+      status: 'blocked' as const,
+    }
+    const { data, error } = await supabase.from('bookings').insert(row).select().single()
+    if (error) throw new Error(error.message)
+    return bookingToApp(data as DbBooking)
+  },
+
+  // Availability toggle: is the current hour already blocked?
+  async isHourBlocked(hourStart: Date): Promise<boolean> {
+    const end = new Date(hourStart.getTime() + 60 * 60 * 1000)
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('status', 'blocked')
+      .lt('start_time', end.toISOString())
+      .gt('end_time', hourStart.toISOString())
+      .limit(1)
+    if (error) throw new Error(error.message)
+    return (data?.length ?? 0) > 0
+  },
+
+  async blockCurrentHour(hourStart: Date): Promise<void> {
+    await API.createBlockBooking({ startISO: hourStart.toISOString() })
+  },
+
+  async unblockCurrentHour(hourStart: Date): Promise<void> {
+    const end = new Date(hourStart.getTime() + 60 * 60 * 1000)
+    const { data, error } = await supabase
+      .from('bookings')
+      .select('id')
+      .eq('status', 'blocked')
+      .lt('start_time', end.toISOString())
+      .gt('end_time', hourStart.toISOString())
+    if (error) throw new Error(error.message)
+    const ids = (data ?? []).map((r: any) => r.id)
+    if (ids.length) {
+      const { error: delErr } = await supabase.from('bookings').delete().in('id', ids)
+      if (delErr) throw new Error(delErr.message)
+    }
+  },
 }
 
 export { calculateQuote }

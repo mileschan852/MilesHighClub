@@ -2,9 +2,11 @@ import { useEffect, useRef, useState } from 'react'
 import { API } from '../api'
 
 // Map page.
-// - Admins: always accessible, shows the admin's own last known location on a
-//   Leaflet map, and keeps it updated while the app is open (and on each visit).
-// - Customers: unlocked only from 1 hour before an accepted booking until it ends.
+// - Admins: always accessible. Shows the admin's own live location on an
+//   OpenStreetMap embed (reliable, no external tile API key) and keeps saving
+//   the location while the page is open.
+// - Customers: unlocked only from 1 hour before an accepted booking until it
+//   ends. Shows Miles' (admin's) last saved location.
 export default function MapPage({ bookings, isAdmin, username }: { bookings: { status: string; startISO: string }[]; isAdmin: boolean; username?: string }) {
   const now = Date.now()
   const active =
@@ -19,9 +21,17 @@ export default function MapPage({ bookings, isAdmin, username }: { bookings: { s
   const [err, setErr] = useState('')
   const savedRef = useRef(false)
 
+  // Customer view: load the admin's last known location.
+  useEffect(() => {
+    if (!active || isAdmin) return
+    API.getAdminLocation()
+      .then(setPos)
+      .catch((e: any) => setErr(e.message || 'Could not load location'))
+  }, [active, isAdmin])
+
+  // Admin view: device geolocation, saved to the DB (once per visit, retried if it failed).
   useEffect(() => {
     if (!active || !isAdmin) return
-    // Admin: get device location and save it as the admin's last known location.
     if (!('geolocation' in navigator)) { setErr('Geolocation not supported on this device'); return }
     navigator.geolocation.getCurrentPosition(
       (p) => {
@@ -33,7 +43,7 @@ export default function MapPage({ bookings, isAdmin, username }: { bookings: { s
         }
       },
       (e) => setErr(e.message || 'Location permission denied'),
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 30000 },
+      { enableHighAccuracy: true, timeout: 15000, maximumAge: 30000 },
     )
   }, [active, isAdmin])
 
@@ -46,28 +56,36 @@ export default function MapPage({ bookings, isAdmin, username }: { bookings: { s
     )
   }
 
+  // OpenStreetMap embed iframe: works reliably where the old static-map image
+  // service timed out.
+  const bbox = pos ? `${pos.lng - 0.005},${pos.lat - 0.003},${pos.lng + 0.005},${pos.lat + 0.003}` : ''
+  const embed = pos
+    ? `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${pos.lat},${pos.lng}`
+    : ''
+
   return (
     <div className="map">
-      <h2>📍 Last known location</h2>
+      <h2>📍 {isAdmin ? 'Your location' : "Miles' location"}</h2>
       {err && <p className="error">{err}</p>}
       {pos ? (
         <>
-          <p>
-            {pos.lat.toFixed(5)}, {pos.lng.toFixed(5)}
-            <br />
-            <small>Updated {new Date(pos.at).toLocaleTimeString('en-HK', { hour12: false })}</small>
-          </p>
-          <img
-            alt="map"
-            style={{ width: '100%', borderRadius: 12 }}
-            src={`https://staticmap.openstreetmap.de/staticmap.php?center=${pos.lat},${pos.lng}&zoom=16&size=480x320&markers=${pos.lat},${pos.lng},red`}
+          <iframe
+            title="map"
+            style={{ width: '100%', height: 320, border: 0, borderRadius: 12 }}
+            src={embed}
           />
+          <p>
+            <small>
+              {pos.lat.toFixed(5)}, {pos.lng.toFixed(5)}
+              {pos.at && <> · Updated {new Date(pos.at).toLocaleTimeString('en-HK', { hour12: false })}</>}
+            </small>
+          </p>
           <p>
             <a href={`https://www.google.com/maps?q=${pos.lat},${pos.lng}`}>Open in Google Maps</a>
           </p>
         </>
       ) : (
-        !err && <p>Getting your location…</p>
+        !err && <p>Getting location…</p>
       )}
     </div>
   )

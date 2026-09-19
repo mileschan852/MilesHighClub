@@ -37,6 +37,21 @@ button { cursor: pointer; }
 .dayview-event.status-pending { background: #4a3a10; border: 1px solid #a80; color: #fda; }
 .dayview-event.status-accepted { background: #143a18; border: 1px solid #2a2; color: #cfc; }
 .dayview-event.status-rejected { background: #3a1414; border: 1px solid #a22; color: #faa; }
-.dayview-picked { position: absolute; left: 4px; right: 4px; background: rgba(60, 90, 220, 0.35); border: 1px dashed #68f; border-radius: 6px; color: #cde; font-size: 11px; padding: 3px 6px; pointer-events: none; }
+.dayview-event.status-blocked { background: #26262e; border: 1px solid #666; color: #bbb; }
+.dayview-picked { position: absolute; left: 4px; right: 4px; background: rgba(60, 90, 220, 0.35); border: 1px dashed #68f; border-radius: 6px; color: #cde; font-size: 11px; padding: 3px 6px; pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.dayview-picked button { font-size: 11px; padding: 3px 8px; }
+
+/* Booking form pop-up */
+.modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
+.modal { background: #1c1c24; border: 1px solid #444; border-radius: 12px; padding: 16px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 8px; max-height: 85vh; overflow-y: auto; }
+.modal h3 { margin: 0 0 4px; font-size: 15px; }
+
+/* Admin availability toggle */
+.availability-toggle { width: 100%; margin: 8px 0; padding: 10px; border-radius: 10px; font-size: 13px; border: 1px solid #555; background: #22222c; color: #ddd; }
+.availability-toggle.on { border-color: #2a2; }
+.availability-toggle.off { border-color: #a33; }
+
+/* Admin "not available" button inside picked slot */
+.dayview-picked .block-btn { border-color: #a33; color: #faa; }
 .dayview-hint { color: #888; font-size: 12px; margin-top: 8px; }
 .gcal-link { color: #8cf; font-size: 10px; text-decoration: underline; pointer-events: auto; }

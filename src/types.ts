@@ -11,7 +11,7 @@ export interface Booking {
   startISO: string
   location: string
   quote: { base: number; option: string; taxiFare: number; total: number; currency: string }
-  status: 'pending' | 'accepted' | 'rejected'
+  status: 'pending' | 'accepted' | 'rejected' | 'blocked'
 }
 
 export interface CustomerInfo {
