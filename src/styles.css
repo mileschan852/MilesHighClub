@@ -1,69 +1,30 @@
-* { box-sizing: border-box; margin: 0; }
-body { font-family: -apple-system, sans-serif; background: #111; color: #eee; }
-.app { max-width: 480px; margin: 0 auto; padding: 16px 16px 80px; }
-.bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #1b1b1b; border-top: 1px solid #333; }
-.bottom-nav button { flex: 1; padding: 14px 0; background: none; border: 0; color: #eee; font-size: 14px; }
-.slots { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-.slots button { padding: 10px 0; border-radius: 6px; border: 1px solid #444; background: #1b1b1b; color: #eee; }
-.slots button.busy { opacity: 0.3; }
-.slots button.free { cursor: pointer; }
-.calendar form, .profile, .admin, .quote { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
-input { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #1b1b1b; color: #eee; }
-button { cursor: pointer; }
-.quote .notice { color: #f66; font-size: 13px; }
-.error { color: #f66; }
-.map.greyed { filter: grayscale(1); opacity: 0.4; text-align: center; padding: 60px 0; }
-.booking { display: flex; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid #333; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }
-.booking.accepted { border-color: #2a2; }
-.booking.rejected { opacity: 0.5; }
-.gate { text-align: center; padding: 80px 0; }
-.customer-row { display: block; width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #333; background: #1b1b1b; color: #eee; }
-.field { display: flex; align-items: center; gap: 10px; }
-.field-label { flex: 0 0 130px; font-size: 13px; color: #bbb; }
-.field input { flex: 1; }
-.field-row { display: flex; gap: 10px; }
-.field.duo .short { flex: 0 0 72px; min-width: 0; }
-.field.duo .long { flex: 1 1 0; min-width: 0; }
-.field.duo .half { flex: 1 1 0; min-width: 0; }
-.field.duo .field-label { flex: 0 0 130px; }
+body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #11151c; color: #eef2f7; }
+a { color: #7db4ff; }
+.app { max-width: 720px; margin: 0 auto; padding: 12px; }
+h1, h2, h3 { margin: 8px 0; }
+.muted { color: #9aa5b1; font-size: 13px; }
+.error { color: #ff6b6b; font-size: 13px; }
+button { background: #2f6fed; color: #fff; border: 0; border-radius: 8px; padding: 8px 12px; font-size: 14px; cursor: pointer; }
+button.secondary { background: #39424e; }
+input, textarea, select { background: #1b2129; color: #eef2f7; border: 1px solid #333c48; border-radius: 8px; padding: 8px; font-size: 14px; box-sizing: border-box; }
+nav.tabbar { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #0d1117; border-top: 1px solid #222a33; }
+nav.tabbar button { flex: 1; background: none; border-radius: 0; padding: 12px 0; color: #9aa5b1; font-size: 13px; }
+nav.tabbar button.active { color: #fff; }
 
+.field { display: flex; align-items: center; gap: 10px; margin: 8px 0; }
+.field-label { flex: 0 0 130px; font-size: 13px; color: #bbb; }
+.field > input, .field > textarea, .field > select { flex: 1; min-width: 0; }
+.field-row { display: flex; gap: 10px; }
 .field-row .field { flex: 1; }
 .field-row .field-label { flex: 0 0 auto; min-width: 70px; }
 .field-value { flex: 1; font-size: 14px; color: #eee; }
-.add-customer { padding: 10px 16px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #555; background: #222; color: #eee; }
-.locked { text-align: center; padding: 60px 0; color: #aaa; }
-.muted { color: #888; font-size: 13px; }
-/* Day view calendar */
-.dayview-header { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.dayview-header h2 { font-size: 15px; flex: 1; text-align: center; }
-.dayview-header .ghost { background: none; border: 1px solid #444; border-radius: 6px; padding: 6px 10px; color: #aaa; }
-.dayview-header button { border: 1px solid #444; border-radius: 6px; padding: 6px 10px; background: #1b1b1b; color: #eee; }
-.dayview-grid-wrap { display: flex; margin-top: 10px; overflow-y: auto; max-height: 70vh; border: 1px solid #333; border-radius: 8px; background: #151515; }
-.dayview-hours { width: 52px; flex-shrink: 0; }
-.dayview-hour-label { font-size: 10px; color: #777; text-align: right; padding-right: 6px; border-top: 1px solid #2a2a2a; }
-.dayview-grid { position: relative; flex: 1; cursor: copy; }
-.dayview-hourline { position: absolute; left: 0; right: 0; border-top: 1px solid #2a2a2a; pointer-events: none; }
-.dayview-now { position: absolute; left: 0; right: 0; border-top: 2px solid #e33; pointer-events: none; }
-.dayview-event { position: absolute; left: 4px; right: 4px; border-radius: 6px; padding: 3px 6px; font-size: 11px; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; }
-.dayview-event strong { font-size: 11px; }
-.dayview-event.status-pending { background: #4a3a10; border: 1px solid #a80; color: #fda; }
-.dayview-event.status-accepted { background: #143a18; border: 1px solid #2a2; color: #cfc; }
-.dayview-event.status-rejected { background: #3a1414; border: 1px solid #a22; color: #faa; }
-.dayview-event.status-blocked { background: #26262e; border: 1px solid #666; color: #bbb; }
-.dayview-picked { position: absolute; left: 4px; right: 4px; background: rgba(60, 90, 220, 0.35); border: 1px dashed #68f; border-radius: 6px; color: #cde; font-size: 11px; padding: 3px 6px; pointer-events: auto; display: flex; align-items: center; justify-content: space-between; gap: 6px; }
-.dayview-picked button { font-size: 11px; padding: 3px 8px; }
 
-/* Booking form pop-up */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0, 0, 0, 0.65); display: flex; align-items: center; justify-content: center; z-index: 50; padding: 16px; }
-.modal { background: #1c1c24; border: 1px solid #444; border-radius: 12px; padding: 16px; width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 8px; max-height: 85vh; overflow-y: auto; }
-.modal h3 { margin: 0 0 4px; font-size: 15px; }
-
-/* Admin availability toggle */
-.availability-toggle { width: 100%; margin: 8px 0; padding: 10px; border-radius: 10px; font-size: 13px; border: 1px solid #555; background: #22222c; color: #ddd; }
-.availability-toggle.on { border-color: #2a2; }
-.availability-toggle.off { border-color: #a33; }
-
-/* Admin "not available" button inside picked slot */
-.dayview-picked .block-btn { border-color: #a33; color: #faa; }
-.dayview-hint { color: #888; font-size: 12px; margin-top: 8px; }
-.gcal-link { color: #8cf; font-size: 10px; text-decoration: underline; pointer-events: auto; }
+/* Duo rows: label left, two inputs right, spanning exactly the same
+   width as the single full-width inputs above and below. */
+.field.duo { gap: 0; }
+.field.duo .field-label { flex: 0 0 130px; margin-right: 10px; }
+.field.duo .inputs { display: flex; flex: 1; min-width: 0; gap: 10px; }
+.field.duo .inputs > input { min-width: 0; }
+.field.duo .short { flex: 0 0 64px; }
+.field.duo .long { flex: 1 1 0; }
+.field.duo .half { flex: 1 1 0; }

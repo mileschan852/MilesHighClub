@@ -70,13 +70,17 @@ export default function AdminPage({ customers, onUpdate }: {
           {field('Phone number', selected.phone, (v) => setSelected({ ...selected, phone: v }))}
           <label className="field duo">
             <span className="field-label">Street no / name</span>
-            <input className="short" value={selected.streetNumber} onChange={(e) => setSelected({ ...selected, streetNumber: e.target.value })} />
-            <input className="long" value={selected.streetName} onChange={(e) => setSelected({ ...selected, streetName: e.target.value })} />
+            <span className="inputs">
+              <input className="short" maxLength={6} placeholder="No." value={selected.streetNumber} onChange={(e) => setSelected({ ...selected, streetNumber: e.target.value })} />
+              <input className="long" placeholder="Street name" value={selected.streetName} onChange={(e) => setSelected({ ...selected, streetName: e.target.value })} />
+            </span>
           </label>
           <label className="field duo">
             <span className="field-label">Unit / PassCode</span>
-            <input className="half" value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} />
-            <input className="half" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
+            <span className="inputs">
+              <input className="half" placeholder="Unit" value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} />
+              <input className="half" placeholder="PassCode" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
+            </span>
           </label>
           <label className="field">
             <span className="field-label">Credits</span>
