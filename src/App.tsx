@@ -49,7 +49,7 @@ export default function App() {
         }} />}
         {page === 'calendar' && (
           canEnterCalendar ? (
-            <CalendarPage bookings={bookings} user={user} isAdmin={isAdmin} onBooked={() => API.listBookings().then(setBookings)} />
+            <CalendarPage bookings={bookings} user={user} isAdmin={isAdmin} customers={customers} onBooked={() => API.listBookings().then(setBookings)} />
           ) : (
             <div className="locked">
               <h2>🔒 Calendar locked</h2>

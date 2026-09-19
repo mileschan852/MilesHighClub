@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Booking } from '../types'
 import { API } from '../api'
 import { NON_REFUNDABLE_NOTICE } from '../pricing'
+import { CustomerInfo } from '../types'
 
 const BOOKING_MS = 60 * 60 * 1000 // booking occupies 1 hour
 const MIN_LEAD_MS = 60 * 60 * 1000 // must book at least 1 hour ahead
@@ -41,10 +42,11 @@ function gcalUrl(b: { startISO: string; location: string; people: number }) {
   return `https://calendar.google.com/calendar/render?${p.toString()}`
 }
 
-export default function CalendarPage({ bookings, user, isAdmin, onBooked }: {
+export default function CalendarPage({ bookings, user, isAdmin, customers = [], onBooked }: {
   bookings: Booking[]
   user: { id: number; name: string; username?: string }
   isAdmin: boolean
+  customers?: CustomerInfo[]
   onBooked: () => void
 }) {
   // Day-view state: the day being viewed (default: today).
@@ -129,7 +131,10 @@ export default function CalendarPage({ bookings, user, isAdmin, onBooked }: {
     if (!picked) return setErr('Pick a time slot first')
     try {
       const q = await API.previewQuote({ startISO: picked.toISOString(), people, location, onHKIslandMTR, inKowloonOrNT, requestTaxi })
-      setQuote(q)
+      // Customer surcharge (set by admin) is added on top of the quote.
+      const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
+      const surcharge = me?.surcharge ?? 0
+      setQuote({ ...q, surcharge, total: q.total + surcharge })
       setErr('')
     } catch (e: any) {
       setErr(e.message)
@@ -265,7 +270,7 @@ export default function CalendarPage({ bookings, user, isAdmin, onBooked }: {
       {quote && (
         <div className="quote">
           <h3>Quote: {quote.total} {quote.currency}</h3>
-          <p>Base: {quote.base} · Option {quote.option === 'NONE' ? '—' : quote.option}: {quote.taxiFare}</p>
+          <p>Base: {quote.base} · Option {quote.option === 'NONE' ? '—' : quote.option}: {quote.taxiFare}{quote.surcharge ? ` · Surcharge: ${quote.surcharge}` : ''}</p>
           <p className="notice">{NON_REFUNDABLE_NOTICE}</p>
           <button onClick={acceptQuote}>Accept</button>
           <button onClick={() => { setQuote(null); setPicked(null); setShowForm(false) }}>Reject</button>

@@ -18,6 +18,9 @@ button { cursor: pointer; }
 .booking.rejected { opacity: 0.5; }
 .gate { text-align: center; padding: 80px 0; }
 .customer-row { display: block; width: 100%; text-align: left; padding: 12px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #333; background: #1b1b1b; color: #eee; }
+.field { display: flex; align-items: center; gap: 10px; }
+.field-label { flex: 0 0 130px; font-size: 13px; color: #bbb; }
+.field input { flex: 1; }
 .add-customer { padding: 10px 16px; margin-bottom: 8px; border-radius: 6px; border: 1px solid #555; background: #222; color: #eee; }
 .locked { text-align: center; padding: 60px 0; color: #aaa; }
 .muted { color: #888; font-size: 13px; }

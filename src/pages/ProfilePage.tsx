@@ -7,7 +7,7 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
 
   useEffect(() => {
     API.listCustomers().then((all) => setInfo(all.find((c) => c.username && c.username === (user.username ?? '').toLowerCase()) ?? {
-      username: (user.username ?? '').toLowerCase(), name: user.name, phone: '', address: '', unit: '', credits: 0,
+      username: (user.username ?? '').toLowerCase(), name: user.name, phone: '', streetNumber: '', streetName: '', address: '', unit: '', credits: 0, surcharge: 0,
     }))
   }, [user.username])
 

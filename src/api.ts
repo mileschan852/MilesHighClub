@@ -31,14 +31,19 @@ function bookingToApp(row: DbBooking): Booking {
 }
 
 function userToCustomer(row: DbUser): CustomerInfo {
+  const streetNumber = row.street_number ?? ''
+  const streetName = row.street_name ?? (row.address && !streetNumber ? row.address : '')
   return {
     username: row.username ?? '',
     telegramUserId: row.telegram_id,
-    name: row.role === 'admin' ? 'Admin' : (row.username ? `@${row.username}` : `Customer ${row.telegram_id}`),
+    name: row.name || (row.role === 'admin' ? 'Admin' : (row.username ? `@${row.username}` : `Customer ${row.telegram_id}`)),
     phone: row.phone ?? '',
-    address: row.address ?? '',
+    streetNumber,
+    streetName,
+    address: [streetNumber, streetName].filter(Boolean).join(' '),
     unit: row.unit ?? '',
     credits: row.credits ?? 0,
+    surcharge: row.surcharge ?? 0,
   }
 }
 
@@ -99,7 +104,7 @@ export const API = {
   async updateCustomer(c: CustomerInfo): Promise<CustomerInfo> {
     const { error } = await supabase
       .from('users_list')
-      .update({ phone: c.phone, address: c.address, unit: c.unit, credits: c.credits })
+      .update({ name: c.name || null, phone: c.phone, street_number: c.streetNumber, street_name: c.streetName, address: c.address, unit: c.unit, credits: c.credits, surcharge: c.surcharge })
       .eq('username', c.username)
     if (error) throw new Error(error.message)
     return c
@@ -117,7 +122,7 @@ export const API = {
     if (existing) return userToCustomer(existing as DbUser)
     const { data, error } = await supabase
       .from('users_list')
-      .insert({ username, phone: null, address: null, unit: null, credits: 0 })
+      .insert({ username, name: null, phone: null, street_number: null, street_name: null, address: null, unit: null, credits: 0, surcharge: 0 })
       .select()
       .single()
     if (error) throw new Error(error.message)

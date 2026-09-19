@@ -21,7 +21,10 @@ export interface CustomerInfo {
   telegramUserId?: number
   name: string
   phone: string
-  address: string
+  streetNumber: string
+  streetName: string
+  address: string // combined street number + name (legacy / display)
   unit: string
   credits: number
+  surcharge: number // admin-only extra added to quotes
 }

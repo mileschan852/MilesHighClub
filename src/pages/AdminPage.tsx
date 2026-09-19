@@ -4,7 +4,8 @@ import { useState } from 'react'
 
 // Admin page: 3rd bottom-nav button. Shows the customer list with an
 // "Add Customer" button on top (adds by Telegram @username). Tapping a
-// customer shows their info.
+// customer shows their info with labeled inputs; surcharge is admin-only
+// and is added to quotes.
 export default function AdminPage({ customers, onUpdate }: {
   customers: CustomerInfo[]
   onUpdate: () => void
@@ -33,6 +34,15 @@ export default function AdminPage({ customers, onUpdate }: {
     }
   }
 
+  function field(label: string, value: string | number, onChange: (v: string) => void, type = 'text') {
+    return (
+      <label className="field">
+        <span className="field-label">{label}</span>
+        <input type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+      </label>
+    )
+  }
+
   return (
     <div className="admin">
       <h2>Customers</h2>
@@ -56,10 +66,13 @@ export default function AdminPage({ customers, onUpdate }: {
         <div className="customer-editor">
           <h3>{selected.name}</h3>
           <p className="muted">Telegram: @{selected.username || selected.telegramUserId}</p>
-          <input value={selected.phone} onChange={(e) => setSelected({ ...selected, phone: e.target.value })} placeholder="Phone" />
-          <input value={selected.address} onChange={(e) => setSelected({ ...selected, address: e.target.value })} placeholder="Address" />
-          <input value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} placeholder="Unit" />
-          <input type="number" value={selected.credits} onChange={(e) => setSelected({ ...selected, credits: +e.target.value })} placeholder="Credits" />
+          {field('Name', selected.name, (v) => setSelected({ ...selected, name: v }))}
+          {field('Phone number', selected.phone, (v) => setSelected({ ...selected, phone: v }))}
+          {field('Street number', selected.streetNumber, (v) => setSelected({ ...selected, streetNumber: v }))}
+          {field('Street name', selected.streetName, (v) => setSelected({ ...selected, streetName: v }))}
+          {field('Unit', selected.unit, (v) => setSelected({ ...selected, unit: v }))}
+          {field('Credits', selected.credits, (v) => setSelected({ ...selected, credits: +v || 0 }), 'number')}
+          {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
           <button onClick={async () => { await API.updateCustomer(selected); setSelected(null); onUpdate() }}>Save</button>
           <button onClick={() => setSelected(null)}>Close</button>
         </div>

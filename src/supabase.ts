@@ -27,9 +27,13 @@ export interface DbUser {
   telegram_id: number
   username: string | null // canonical identity (Telegram @username, lowercase)
   role: string | null
+  name: string | null
   phone: string | null
+  street_number: string | null
+  street_name: string | null
   address: string | null
   unit: string | null
   credits: number | null
+  surcharge: number | null
   created_at: string
 }
