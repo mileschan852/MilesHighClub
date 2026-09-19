@@ -65,14 +65,14 @@ export const API = {
     // not the unique index on username exists (avoids users_list_pkey conflicts).
     const { data: existing } = await supabase
       .from('users_list')
-      .select('telegram_id, username')
-      .or(`username.eq.${username},telegram_id.eq.${id}`)
+      .select('username')
+      .eq('username', username)
       .maybeSingle()
     if (existing) {
       const { error } = await supabase
         .from('users_list')
-        .update({ username, telegram_id: id, ...(isAdminName ? { role: 'admin' } : {}) })
-        .eq('telegram_id', existing.telegram_id)
+        .update({ username, ...(isAdminName ? { role: 'admin' } : {}) })
+        .eq('username', username)
       if (error) throw new Error(error.message)
     } else {
       const { error } = await supabase
