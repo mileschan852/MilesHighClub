@@ -82,10 +82,7 @@ export default function AdminPage({ customers, onUpdate }: {
               <input className="half" placeholder="PassCode" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
             </span>
           </label>
-          <label className="field">
-            <span className="field-label">Credits</span>
-            <span className="field-value">{selected.credits} credits left</span>
-          </label>
+          {field('Credits', selected.credits, (v) => setSelected({ ...selected, credits: +v || 0 }), 'number')}
           {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
           <button onClick={async () => { await API.updateCustomer(selected); setSelected(null); onUpdate() }}>Save</button>
           <button onClick={() => setSelected(null)}>Close</button>
