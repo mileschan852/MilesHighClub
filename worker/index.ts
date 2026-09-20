@@ -149,7 +149,7 @@ async function upsertCustomer(env: Env, c: Partial<CustomerInfo> & { telegramUse
   const all = await listCustomers(env)
   const i = all.findIndex((x) => x.telegramUserId === c.telegramUserId)
   if (i >= 0) all[i] = { ...all[i], ...c }
-  else all.push({ phone: '', streetNumber: '', streetName: '', address: '', unit: '', passcode: '', credits: 0, surcharge: 0, closestMtr: '', name: c.name ?? '', username: c.username ?? '', telegramUserId: c.telegramUserId })
+  else all.push({ phone: '', streetNumber: '', streetName: '', address: '', unit: '', passcode: '', credits: 0, surcharge: 0, surchargeMode: 'addition', closestMtr: '', name: c.name ?? '', username: c.username ?? '', telegramUserId: c.telegramUserId })
   await env.MHC_KV.put('customers', JSON.stringify(all))
 }
 async function notifyAdmin(env: Env, text: string) {

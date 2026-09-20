@@ -54,6 +54,7 @@ input, textarea, select { padding: 10px; border-radius: 6px; border: 1px solid #
 .dayview-event { position: absolute; left: 4px; right: 4px; border-radius: 6px; padding: 3px 6px; font-size: 11px; overflow: hidden; pointer-events: none; display: flex; flex-direction: column; }
 .dayview-event strong { font-size: 11px; }
 .dayview-event.status-pending { background: #4a3a10; border: 1px solid #a80; color: #fda; }
+.dayview-event.status-quoted { background: #8a7400; border: 1px solid #ffd400; color: #fff; }
 .dayview-event.status-accepted { background: #143a18; border: 1px solid #2a2; color: #cfc; }
 .dayview-event.status-rejected { background: #3a1414; border: 1px solid #a22; color: #faa; }
 .dayview-event.status-blocked { background: #26262e; border: 1px solid #666; color: #bbb; }
@@ -100,6 +101,13 @@ input.readonly, input:disabled { color: #9aa3ad; background: #15181e; border-col
 /* Danger / confirm remove */
 button.danger { background: #a33; }
 .confirm-remove { display: flex; flex-direction: column; gap: 6px; }
+
+/* Admin booking decision queue */
+.admin-queue { margin-top: 16px; display: flex; flex-direction: column; gap: 8px; }
+.admin-queue h3 { margin: 8px 0 0; font-size: 14px; }
+.booking-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.booking-actions button { font-size: 12px; padding: 5px 8px; }
+.booking { flex-direction: column; align-items: flex-start; }
 
 /* MTR station name colouring (official line colours) */
 .mtr-station { font-weight: bold; }

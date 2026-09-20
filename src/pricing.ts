@@ -4,16 +4,20 @@ export interface QuoteInput {
   startISO: string            // booking start (ISO with HK offset)
   people: number
   location: string            // free text address
+  closestMtr?: string         // closest MTR station chosen in the form
   onHKIslandMTR: boolean      // location is at/on a Hong Kong Island MTR station
   inKowloonOrNT: boolean      // location is in Kowloon or New Territories
   requestTaxi: boolean        // customer explicitly chose "request taxi"
   uberHighFare?: number       // Uber highest estimate (one-way) from worker, HKD
+  surcharge?: number          // admin-set surcharge amount
+  surchargeMode?: 'per_person' | 'addition' | 'fixed' // how surcharge applies
 }
 
 export interface QuoteResult {
   base: number
   option: 'A' | 'B' | 'NONE'
   taxiFare: number
+  surcharge: number      // resolved surcharge amount included in total
   total: number
   currency: 'HKD'
 }
@@ -46,7 +50,11 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
   let option: QuoteResult['option']
   let taxiFare: number
 
-  if (night && input.requestTaxi) {
+  // Kennedy Town: no transportation charge at all.
+  if ((input.closestMtr ?? '') === 'Kennedy Town') {
+    taxiFare = 0
+    option = 'NONE'
+  } else if (night && input.requestTaxi) {
     // Night (23:00-07:59): Uber standard taxi, total = 2 x maximum standard
     // metered taxi price, rounded up to the nearest 10 HKD.
     const maxMetered = roundUpTo10(input.uberHighFare ?? 0)
@@ -58,7 +66,20 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
     option = 'A'
   }
 
-  return { base, option, taxiFare, total: base + taxiFare, currency: 'HKD' }
+  // Surcharge modes:
+  //   per_person: surcharge x head count
+  //   addition:   flat add (negative = discount)
+  //   fixed:      total replaced by surcharge amount
+  const sur = input.surcharge ?? 0
+  let surcharge = 0
+  switch (input.surchargeMode) {
+    case 'per_person': surcharge = sur * input.people; break
+    case 'addition': surcharge = sur; break
+    case 'fixed': surcharge = sur - (base + taxiFare); break // delta so total == sur
+    default: surcharge = sur
+  }
+
+  return { base, option, taxiFare, surcharge, total: base + taxiFare + surcharge, currency: 'HKD' }
 }
 
 export const NON_REFUNDABLE_NOTICE =

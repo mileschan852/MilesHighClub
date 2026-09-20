@@ -142,7 +142,15 @@ export default function AdminPage({ customers, onUpdate }: {
                 <input className="half" placeholder="PassCode" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
               </span>
             </label>
-            {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
+            {field('Surcharge amount', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
+            <label className="field">
+              <span className="field-label">Surcharge mode</span>
+              <select value={selected.surchargeMode ?? 'addition'} onChange={(e) => setSelected({ ...selected, surchargeMode: e.target.value as CustomerInfo['surchargeMode'] })}>
+                <option value="per_person">/person (per head count)</option>
+                <option value="addition">Addition (add to total, negative = discount)</option>
+                <option value="fixed">Fixed (replace total)</option>
+              </select>
+            </label>
             {confirmRemove && (
               <div className="confirm-remove">
                 <span className="muted">Remove {selected.name}{address ? ` (${address})` : ''}? This deletes the user.</span>

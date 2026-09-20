@@ -12,6 +12,12 @@ export interface Booking {
   location: string
   quote: { base: number; option: string; taxiFare: number; total: number; currency: string }
   status: 'pending' | 'accepted' | 'rejected' | 'blocked'
+  // Quote-then-receipt flow:
+  //   'quoted'   - slot shown yellow to everyone (info only for admin)
+  //   'receipt'  - admin accepted, waiting for the client's payment receipt
+  //   'confirmed' - receipt accepted by admin (green)
+  receiptStatus?: 'requested' | 'confirmed' | null
+  receiptImageUrl?: string | null
 }
 
 export interface CustomerInfo {
@@ -27,6 +33,7 @@ export interface CustomerInfo {
   unit: string
   passcode: string
   credits: number
-  surcharge: number // admin-only extra added to quotes
+  surcharge: number // admin-only extra applied to quotes
+  surchargeMode: 'per_person' | 'addition' | 'fixed' // how the surcharge applies
   closestMtr: string // closest MTR station, part of the address
 }

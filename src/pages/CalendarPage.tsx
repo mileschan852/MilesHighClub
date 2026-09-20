@@ -158,12 +158,14 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
     if (!picked) return setErr('Pick a time slot first')
     const address = [addressNo, addressName].filter(Boolean).join(' ')
     const district = detectDistrict(address)
+    const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
     try {
-      const q = await API.previewQuote({ startISO: picked.toISOString(), people, location: address, onHKIslandMTR: district.hkIsland, inKowloonOrNT: district.klnOrNT, requestTaxi: taxi })
-      // Customer surcharge (set by admin) is added on top of the quote.
-      const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
-      const surcharge = me?.surcharge ?? 0
-      setQuote({ ...q, surcharge, total: q.total + surcharge })
+      const q = await API.previewQuote({
+        startISO: picked.toISOString(), people, location: address, closestMtr: mtr,
+        onHKIslandMTR: district.hkIsland, inKowloonOrNT: district.klnOrNT, requestTaxi: taxi,
+        surcharge: me?.surcharge ?? 0, surchargeMode: me?.surchargeMode ?? 'addition',
+      })
+      setQuote({ ...q })
       setErr('')
     } catch (e: any) {
       setErr(e.message)
@@ -172,7 +174,7 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
 
   async function acceptQuote() {
     if (!picked || !quote) return
-    await API.createBooking({
+    const b = await API.createBooking({
       telegramUserId: user.id,
       name: user.name,
       phone: customers.find((c) => c.username === (user.username ?? '').toLowerCase())?.phone ?? '',
@@ -183,6 +185,36 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
       quote,
     })
     setPicked(null); setQuote(null); setShowForm(false)
+    setReceiptFor(b) // booking saved: pop up the receipt instructions
+    onBooked()
+  }
+
+  // Receipt pop-up after admin accepts: client is asked to send a transaction
+  // receipt (photo) to 61898417 for the quoted amount.
+  const [receiptFor, setReceiptFor] = useState<Booking | null>(null)
+
+  // Admin actions on a quoted booking.
+  async function adminAdjustTransport(b: Booking) {
+    const input = window.prompt(`Adjusted transport amount for ${b.name} (current: ${b.quote.taxiFare} HKD)`, String(b.quote.taxiFare))
+    if (input === null) return
+    const fare = Math.max(0, Math.round(Number(input) || 0))
+    await API.adjustTransport(b.id, fare, b.quote.base + fare)
+    await API.requestReceipt(b.id)
+    onBooked()
+  }
+
+  async function adminAccept(b: Booking) {
+    await API.requestReceipt(b.id)
+    onBooked()
+  }
+
+  async function adminReject(b: Booking) {
+    await API.setBookingStatus(b.id, 'rejected')
+    onBooked()
+  }
+
+  async function adminConfirmReceipt(b: Booking) {
+    await API.confirmReceipt(b.id)
     onBooked()
   }
 
@@ -232,18 +264,24 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
             const top = (start.getHours() * 60 + start.getMinutes()) * PX_PER_MIN
             const height = Math.max(((end.getTime() - start.getTime()) / 60000) * PX_PER_MIN, 24)
             const isBlock = booking.status === 'blocked'
+            // Yellow "quoted" phase: status pending and no receipt yet requested.
+            const isQuoted = booking.status === 'pending' && !booking.receiptStatus
+            const mine = booking.telegramUserId === user.id || isAdmin
             return (
               <div
                 key={booking.id}
-                className={`dayview-event status-${booking.status}`}
+                className={`dayview-event ${isQuoted ? 'status-quoted' : `status-${booking.status}`}`}
                 style={{ top, height }}
               >
                 {isBlock ? (
                   <strong>🚫 Not available</strong>
-                ) : (
+                ) : mine ? (
                   <>
                     <strong>{fmtHk(start)}–{fmtHk(end)}</strong>
-                    <span>{booking.status === 'pending' ? '⏳ Pending' : booking.status === 'accepted' ? '✅ Accepted' : booking.status} · {booking.people}p</span>
+                    <span>
+                      {isQuoted ? '⏳ Quoted' : booking.receiptStatus === 'confirmed' ? '✅ Confirmed' : booking.status === 'accepted' ? '🧾 Receipt requested' : booking.status}
+                      {' · '}{booking.people}p · {booking.quote.total} HKD
+                    </span>
                     {booking.telegramUserId === user.id && (
                       <a
                         href={gcalUrl(booking)}
@@ -254,6 +292,9 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
                       >📅 Add to Google Calendar</a>
                     )}
                   </>
+                ) : (
+                  // Other clients see only a yellow block with no info.
+                  <strong>Reserved</strong>
                 )}
               </div>
             )
@@ -336,6 +377,51 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
         </div>
       )}
       {err && <p className="error">{err}</p>}
+
+      {/* Receipt instruction pop-up: shown after the admin accepted the quote.
+          The client is asked to send a transaction receipt of the quoted amount
+          to 61898417. Tapping "I've sent it" marks the receipt as submitted. */}
+      {receiptFor && (
+        <div className="modal-backdrop" onClick={() => setReceiptFor(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Send payment receipt</h3>
+            <p>
+              Please send a transaction receipt of <strong>{receiptFor.quote.total} HKD</strong> to
+              <strong> 61898417</strong> to confirm your booking {fmtHk(new Date(receiptFor.startISO))}–{fmtHk(new Date(new Date(receiptFor.startISO).getTime() + BOOKING_MS))}.
+            </p>
+            <button onClick={() => { setReceiptFor(null); onBooked() }}>I've sent it</button>
+            <button type="button" className="secondary" onClick={() => setReceiptFor(null)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {/* Admin: pending quoted bookings need a decision (taxi = adjust transport,
+          otherwise accept / reject). Accepted ones need receipt confirmation. */}
+      {isAdmin && (
+        <div className="admin-queue">
+          <h3>Pending quotes</h3>
+          {bookings.filter((b) => b.status === 'pending' && !b.receiptStatus).length === 0 && <p className="muted">None.</p>}
+          {bookings.filter((b) => b.status === 'pending' && !b.receiptStatus).map((b) => (
+            <div key={b.id} className="booking">
+              <span>{b.name} · {new Date(b.startISO).toLocaleString('en-HK')} · {b.people}p · {b.quote.total} HKD{b.quote.option === 'B' ? ' (taxi)' : ''}</span>
+              <span className="booking-actions">
+                {b.quote.option === 'B'
+                  ? <button onClick={() => adminAdjustTransport(b)}>Adjust transport</button>
+                  : <button onClick={() => adminAccept(b)}>Accept</button>}
+                <button className="danger" onClick={() => adminReject(b)}>Reject</button>
+              </span>
+            </div>
+          ))}
+          <h3>Awaiting receipt confirmation</h3>
+          {bookings.filter((b) => b.status === 'accepted' && b.receiptStatus === 'requested').length === 0 && <p className="muted">None.</p>}
+          {bookings.filter((b) => b.status === 'accepted' && b.receiptStatus === 'requested').map((b) => (
+            <div key={b.id} className="booking accepted">
+              <span>{b.name} · {new Date(b.startISO).toLocaleString('en-HK')} · {b.quote.total} HKD</span>
+              <button onClick={() => adminConfirmReceipt(b)}>Confirm receipt</button>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

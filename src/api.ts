@@ -27,6 +27,8 @@ function bookingToApp(row: DbBooking): Booking {
       currency: 'HKD',
     },
     status: row.status,
+    receiptStatus: (row as any).receipt_status ?? null,
+    receiptImageUrl: (row as any).receipt_image_url ?? null,
   }
 }
 
@@ -45,6 +47,7 @@ function userToCustomer(row: DbUser): CustomerInfo {
     passcode: row.passcode ?? '',
     credits: row.credits ?? 0,
     surcharge: row.surcharge ?? 0,
+    surchargeMode: (row.surcharge_mode as CustomerInfo['surchargeMode']) ?? 'addition',
     closestMtr: row.closest_mtr ?? '',
   }
 }
@@ -106,7 +109,7 @@ export const API = {
   async updateCustomer(c: CustomerInfo): Promise<CustomerInfo> {
     const { error } = await supabase
       .from('users_list')
-      .update({ name: c.name || null, phone: c.phone, street_number: c.streetNumber, street_name: c.streetName, address: c.address, unit: c.unit, passcode: c.passcode, credits: c.credits, surcharge: c.surcharge, closest_mtr: (c.closestMtr || null) })
+      .update({ name: c.name || null, phone: c.phone, street_number: c.streetNumber, street_name: c.streetName, address: c.address, unit: c.unit, passcode: c.passcode, credits: c.credits, surcharge: c.surcharge, surcharge_mode: c.surchargeMode, closest_mtr: (c.closestMtr || null) })
       .eq('username', c.username)
     if (error) throw new Error(error.message)
     return c
@@ -132,7 +135,7 @@ export const API = {
     if (existing) return userToCustomer(existing as DbUser)
     const { data, error } = await supabase
       .from('users_list')
-      .insert({ username, name: null, phone: null, street_number: null, street_name: null, address: null, unit: null, passcode: null, credits: 0, surcharge: 0, closest_mtr: null })
+      .insert({ username, name: null, phone: null, street_number: null, street_name: null, address: null, unit: null, passcode: null, credits: 0, surcharge: 0, surcharge_mode: 'addition', closest_mtr: null })
       .select()
       .single()
     if (error) throw new Error(error.message)
@@ -150,13 +153,52 @@ export const API = {
     return bookingToApp(data as DbBooking)
   },
 
+  // Admin accepted a booking: ask the client to send the payment receipt.
+  async requestReceipt(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ receipt_status: 'requested', status: 'accepted' })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+
+  // Client submitted their receipt (photo URL uploaded elsewhere).
+  async submitReceipt(id: string, imageUrl: string): Promise<void> {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ receipt_image_url: imageUrl, receipt_status: 'requested' })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+
+  // Admin confirms the receipt: slot turns green.
+  async confirmReceipt(id: string): Promise<void> {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ receipt_status: 'confirmed' })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+
+  // Admin adjusts the transport amount on a quoted (taxi) booking.
+  async adjustTransport(id: string, taxiFare: number, total: number): Promise<void> {
+    const { error } = await supabase
+      .from('bookings')
+      .update({ quote_price: total, transport_option: 'B' })
+      .eq('id', id)
+    if (error) throw new Error(error.message)
+  },
+
   async previewQuote(args: {
     startISO: string
     people: number
     location: string
+    closestMtr?: string
     onHKIslandMTR: boolean
     inKowloonOrNT: boolean
     requestTaxi: boolean
+    surcharge?: number
+    surchargeMode?: 'per_person' | 'addition' | 'fixed'
   }): Promise<QuoteResult> {
     // Quote logic lives in src/pricing.ts, shared client + (former) worker.
     return calculateQuote({ ...args, uberHighFare: undefined })
