@@ -117,8 +117,8 @@ async function isNight(startISO: string) {
 }
 
 async function uberHighestFare(env: Env, destination: string): Promise<number> {
-  // Pluggable: use Uber estimates API when a token is configured.
-  // Fallback: flat 300 HKD one-way estimate (highest metered-taxi band).
+  // Uber standard TAXI product: maximum standard metered taxi price (one-way),
+  // converted to HKD. Fallback: flat 300 HKD one-way metered-taxi band.
   if (!env.UBER_API_TOKEN) return 300
   try {
     const res = await fetch('https://api.uber.com/v1.2/estimates/price', {
@@ -129,8 +129,10 @@ async function uberHighestFare(env: Env, destination: string): Promise<number> {
         end_address: destination, seat_count: 1,
       }),
     })
-    const data = await res.json() as { prices?: { high_estimate?: number }[] }
-    const usd = Math.max(0, ...(data.prices ?? []).map((p) => p.high_estimate ?? 0))
+    const data = await res.json() as { prices?: { display_name?: string; high_estimate?: number }[] }
+    const taxiPrices = (data.prices ?? []).filter((p) => (p.display_name ?? '').toLowerCase().includes('taxi'))
+    const pool = taxiPrices.length ? taxiPrices : data.prices ?? []
+    const usd = Math.max(0, ...pool.map((p) => p.high_estimate ?? 0))
     return usd * 7.8 // USD -> HKD
   } catch {
     return 300

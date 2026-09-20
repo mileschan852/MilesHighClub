@@ -1,16 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { CustomerInfo } from '../types'
 import { API } from '../api'
 import { UNIQUE_MTR_STATIONS } from '../mtr'
 
 export default function ProfilePage({ user }: { user: { id: number; name: string; username?: string } }) {
   const [info, setInfo] = useState<CustomerInfo | null>(null)
+  const [baseline, setBaseline] = useState('')
 
   useEffect(() => {
-    API.listCustomers().then((all) => setInfo(all.find((c) => c.username && c.username === (user.username ?? '').toLowerCase()) ?? {
-      username: (user.username ?? '').toLowerCase(), name: user.name, phone: '', streetNumber: '', streetName: '', address: '', unit: '', passcode: '', credits: 0, surcharge: 0, closestMtr: '',
-    }))
+    API.listCustomers().then((all) => {
+      const found = all.find((c) => c.username && c.username === (user.username ?? '').toLowerCase()) ?? {
+        username: (user.username ?? '').toLowerCase(), name: user.name, phone: '', streetNumber: '', streetName: '', address: '', unit: '', passcode: '', credits: 0, surcharge: 0, closestMtr: '',
+      }
+      setInfo(found)
+      setBaseline(JSON.stringify(found))
+    })
   }, [user.username])
+
+  // Save stays disabled until any field actually changed from the loaded state.
+  const dirty = useMemo(() => !!info && JSON.stringify(info) !== baseline, [info, baseline])
 
   if (!info) return null
 
@@ -47,7 +55,7 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
         </span>
       </label>
       <p>{info.credits} credits left</p>
-      <button onClick={() => API.updateCustomer(info)}>Save</button>
+      <button disabled={!dirty} onClick={async () => { await API.updateCustomer(info); setBaseline(JSON.stringify(info)) }}>Save</button>
     </div>
   )
 }

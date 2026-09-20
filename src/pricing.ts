@@ -25,8 +25,8 @@ export function isNightRate(hourHK: number): boolean {
   return hourHK >= NIGHT_START || hourHK < NIGHT_END
 }
 
-export function roundUpTo50(n: number): number {
-  return Math.ceil(n / 50) * 50
+export function roundUpTo10(n: number): number {
+  return Math.ceil(n / 10) * 10
 }
 
 // Fixed transport rates by district (day only, 08:00-23:00).
@@ -47,9 +47,10 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
   let taxiFare: number
 
   if (night && input.requestTaxi) {
-    // Night (23:00-07:59): taxi = Uber estimate x 2 (round trip).
-    const oneWay = roundUpTo50(input.uberHighFare ?? 0)
-    taxiFare = oneWay * 2
+    // Night (23:00-07:59): Uber standard taxi, total = 2 x maximum standard
+    // metered taxi price, rounded up to the nearest 10 HKD.
+    const maxMetered = roundUpTo10(input.uberHighFare ?? 0)
+    taxiFare = maxMetered * 2
     option = 'B'
   } else {
     // Day: flat transport, 50 HK Island / 100 KLN+NT.

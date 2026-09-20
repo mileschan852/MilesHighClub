@@ -1,7 +1,7 @@
 import { Booking, CustomerInfo } from '../types'
 import { API } from '../api'
 import { UNIQUE_MTR_STATIONS } from '../mtr'
-import { useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 
 // Admin page: 3rd bottom-nav button. Shows the customer list with an
 // "Add Customer" button on top (adds by Telegram @username). Tapping a
@@ -12,6 +12,10 @@ export default function AdminPage({ customers, onUpdate }: {
   onUpdate: () => void
 }) {
   const [selected, setSelected] = useState<CustomerInfo | null>(null)
+  const [baseline, setBaseline] = useState('')
+  // Save stays disabled until any field actually changed from the loaded state.
+  const dirty = useMemo(() => !!selected && JSON.stringify(selected) !== baseline, [selected, baseline])
+  useEffect(() => { setBaseline(JSON.stringify(selected)) }, [selected?.username])
   const [adding, setAdding] = useState(false)
   const [newUsername, setNewUsername] = useState('')
   const [err, setErr] = useState('')
@@ -92,7 +96,7 @@ export default function AdminPage({ customers, onUpdate }: {
           </label>
           {field('Credits', selected.credits, (v) => setSelected({ ...selected, credits: +v || 0 }), 'number')}
           {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
-          <button onClick={async () => { await API.updateCustomer(selected); setSelected(null); onUpdate() }}>Save</button>
+          <button disabled={!dirty} onClick={async () => { await API.updateCustomer(selected); setBaseline(JSON.stringify(selected)); setSelected(null); onUpdate() }}>Save</button>
           <button onClick={() => setSelected(null)}>Close</button>
         </div>
       )}
