@@ -110,8 +110,8 @@ export default function AdminPage({ customers, onUpdate }: {
             <h3>{selected.name}</h3>
             <div className="field name-credits-row">
               <label className="field grow">
-                <span className="field-label">Username</span>
-                <input className="readonly" value={selected.username ? `@${selected.username}` : ''} readOnly disabled />
+                <span className="field-label">Name {selected.username && <span className="username-label">@{selected.username}</span>}</span>
+                <input value={selected.name ?? ''} onChange={(e) => setSelected({ ...selected, name: e.target.value })} />
               </label>
               <label className="field credits-field">
                 <span className="field-label">Credits</span>
@@ -143,16 +143,17 @@ export default function AdminPage({ customers, onUpdate }: {
               </span>
             </label>
             {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
-            {confirmRemove ? (
+            {confirmRemove && (
               <div className="confirm-remove">
                 <span className="muted">Remove {selected.name}{address ? ` (${address})` : ''}? This deletes the user.</span>
                 <button className="danger" onClick={removeCustomer}>Confirm remove</button>
-                <button className="secondary" onClick={() => setConfirmRemove(false)}>Keep</button>
               </div>
-            ) : (
-              <button className="danger" onClick={() => setConfirmRemove(true)}>Remove user</button>
             )}
-            <button disabled={!dirty} onClick={async () => { await API.updateCustomer(selected); setBaseline(JSON.stringify(selected)); setSelected(null); onUpdate() }}>Save</button>
+            {/* Remove (left) and Save (right) share one line, each 1/4 width. */}
+            <div className="modal-actions">
+              <button className="danger" onClick={() => setConfirmRemove(true)}>Remove user</button>
+              <button disabled={!dirty} onClick={async () => { await API.updateCustomer(selected); setBaseline(JSON.stringify(selected)); setSelected(null); onUpdate() }}>Save</button>
+            </div>
             <button className="secondary" onClick={() => { setSelected(null); setConfirmRemove(false) }}>Close</button>
           </div>
         </div>

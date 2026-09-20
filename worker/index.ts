@@ -80,8 +80,8 @@ export default {
       const all = await listCustomers(env)
       const i = all.findIndex((x) => x.telegramUserId === c.telegramUserId)
       if (i >= 0) {
-        // only admin can change credits
-        if (!isAdmin) c.credits = all[i].credits
+        // only admin can change credits and name
+        if (!isAdmin) { c.credits = all[i].credits; c.name = all[i].name }
         all[i] = { ...all[i], ...c }
       } else all.push(c)
       await env.MHC_KV.put('customers', JSON.stringify(all))

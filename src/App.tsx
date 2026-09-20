@@ -96,7 +96,7 @@ export default function App() {
           )
         )}
         {page === 'map' && <MapPage bookings={bookings} isAdmin={isAdmin} username={user.username} adminPos={adminPos} />}
-        {page === 'profile' && <ProfilePage user={user} />}
+        {page === 'profile' && <ProfilePage user={user} isAdmin={isAdmin} />}
         <nav className="bottom-nav">
           <button onClick={() => setPage('calendar')}>📅 Calendar</button>
           <button onClick={() => setPage('map')}>🗺️ Map</button>

@@ -3,7 +3,7 @@ import { CustomerInfo } from '../types'
 import { API } from '../api'
 import { UNIQUE_MTR_STATIONS, MTR_LINE_COLORS } from '../mtr'
 
-export default function ProfilePage({ user }: { user: { id: number; name: string; username?: string } }) {
+export default function ProfilePage({ user, isAdmin }: { user: { id: number; name: string; username?: string }; isAdmin?: boolean }) {
   const [info, setInfo] = useState<CustomerInfo | null>(null)
   const [baseline, setBaseline] = useState('')
 
@@ -25,16 +25,18 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
   return (
     <div className="profile">
       <h2>Your info</h2>
-      {/* Name row: username is read-only (Telegram identity), credits sits on
-          the same line, right-aligned with a 6-digit-wide input. */}
+      {/* Name row: the name is only editable by admin (greyed out for clients);
+          the Telegram username shows as a small label beside the Name label.
+          Credits sit on the same line, right-aligned, 6 digits wide, and are
+          admin-only too. */}
       <div className="field name-credits-row">
         <label className="field grow">
-          <span className="field-label">Username</span>
-          <input className="readonly" value={info.username ? `@${info.username}` : ''} readOnly disabled />
+          <span className="field-label">Name {info.username && <span className="username-label">@{info.username}</span>}</span>
+          <input className={isAdmin ? '' : 'readonly'} value={info.name ?? ''} onChange={(e) => setInfo({ ...info, name: e.target.value })} readOnly={!isAdmin} disabled={!isAdmin} />
         </label>
         <label className="field credits-field">
           <span className="field-label">Credits</span>
-          <input type="text" className="credits-input" maxLength={6} value={info.credits} readOnly disabled />
+          <input type="text" className="credits-input" maxLength={6} value={info.credits} onChange={(e) => isAdmin ? setInfo({ ...info, credits: +e.target.value || 0 }) : undefined} readOnly={!isAdmin} disabled={!isAdmin} />
         </label>
       </div>
       <label className="field">

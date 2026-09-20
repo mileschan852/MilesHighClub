@@ -81,6 +81,9 @@ input, textarea, select { padding: 10px; border-radius: 6px; border: 1px solid #
 /* Name + credits on one line: username grows, credits fixed 6 digits,
    label and input right-aligned together. */
 .name-credits-row { display: flex; gap: 10px; align-items: flex-end; }
+.username-label { font-size: 11px; font-weight: normal; color: #8aa; margin-left: 6px; }
+.modal-actions { display: flex; gap: 8px; }
+.modal-actions button { flex: 0 0 25%; min-width: 0; }
 .name-credits-row .grow { flex: 1; min-width: 0; }
 .credits-field { flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 2px; }
 .credits-field .field-label { flex: 0 0 auto; }
