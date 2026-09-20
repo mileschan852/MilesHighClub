@@ -36,8 +36,7 @@ export default {
 
     if (path === '/api/quote' && req.method === 'POST') {
       const body = await req.json<any>()
-      const uber = body.requestTaxi || (await isNight(body.startISO) && body.inKowloonOrNT)
-        ? await uberHighestFare(env, body.location) : undefined
+      const uber = body.requestTaxi ? await uberHighestFare(env, body.location) : undefined
       const q = calculateQuote({ ...body, uberHighFare: uber })
       return json(q)
     }

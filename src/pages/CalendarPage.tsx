@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Booking } from '../types'
 import { API } from '../api'
-import { NON_REFUNDABLE_NOTICE } from '../pricing'
+import { NON_REFUNDABLE_NOTICE, isNightRate } from '../pricing'
 import { CustomerInfo } from '../types'
 import { UNIQUE_MTR_STATIONS } from '../mtr'
 
@@ -64,6 +64,7 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
   const [addressNo, setAddressNo] = useState('')
   const [addressName, setAddressName] = useState('')
   const [mtr, setMtr] = useState('')
+  const [taxi, setTaxi] = useState(false)
   const [quote, setQuote] = useState<any>(null)
   const [err, setErr] = useState('')
 
@@ -129,13 +130,19 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
   }
 
   // Pre-fill the booking street fields from the customer's saved profile
-  // address each time the form opens (still editable).
+  // address each time the form opens (still editable). MTR auto-selects the
+  // customer's saved station.
   useEffect(() => {
     if (!showForm) return
     const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
     setAddressNo(me?.streetNumber ?? '')
     setAddressName(me?.streetName ?? '')
     setMtr(me?.closestMtr ?? '')
+    // Taxi auto-checks for night bookings (11pm-7:59am) unless the MTR
+    // station is Kennedy Town or HKU (HK Island west end, day rate applies).
+    const night = isNightRate(picked ? (picked.getUTCHours() + 8) % 24 : new Date().getHours())
+    const hkIslandMTR = ['Kennedy Town', 'HKU'].includes(me?.closestMtr ?? '')
+    setTaxi(night && !hkIslandMTR)
   }, [showForm])
 
   // Guess district from the street name text so transport pricing applies.
@@ -152,7 +159,7 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
     const address = [addressNo, addressName].filter(Boolean).join(' ')
     const district = detectDistrict(address)
     try {
-      const q = await API.previewQuote({ startISO: picked.toISOString(), people, location: address, onHKIslandMTR: district.hkIsland, inKowloonOrNT: district.klnOrNT, requestTaxi: false })
+      const q = await API.previewQuote({ startISO: picked.toISOString(), people, location: address, onHKIslandMTR: district.hkIsland, inKowloonOrNT: district.klnOrNT, requestTaxi: taxi })
       // Customer surcharge (set by admin) is added on top of the quote.
       const me = customers.find((c) => c.username === (user.username ?? '').toLowerCase())
       const surcharge = me?.surcharge ?? 0
@@ -290,10 +297,20 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
             </label>
             <label className="field">
               <span className="field-label">Closest MTR</span>
-              <select className="long" value={mtr} onChange={(e) => setMtr(e.target.value)} required>
+              <select className="long" value={mtr} onChange={(e) => {
+                setMtr(e.target.value)
+                // Taxi stays checked only if the newly selected MTR is not the
+                // HK Island west-end exception.
+                const night = isNightRate(picked ? (picked.getUTCHours() + 8) % 24 : new Date().getHours())
+                setTaxi(night && !['Kennedy Town', 'HKU'].includes(e.target.value))
+              }} required>
                 <option value="" disabled>Select MTR station</option>
                 {UNIQUE_MTR_STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
               </select>
+            </label>
+            <label className="field">
+              <span className="field-label">Taxi</span>
+              <input type="checkbox" checked={taxi} onChange={(e) => setTaxi(e.target.checked)} />
             </label>
             <button type="submit">Get Quote</button>
             <button type="button" onClick={() => setShowForm(false)}>Cancel</button>
@@ -301,13 +318,21 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
         </div>
       )}
 
+      {/* Quote shown as a pop-up modal in the middle of the screen.
+          Displayed simply as Service + Transport (x2 for 11pm-7:59am taxi). */}
       {quote && (
-        <div className="quote">
-          <h3>Quote: {quote.total} {quote.currency}</h3>
-          <p>Base: {quote.base} · Option {quote.option === 'NONE' ? '—' : quote.option}: {quote.taxiFare}{quote.surcharge ? ` · Surcharge: ${quote.surcharge}` : ''}</p>
-          <p className="notice">{NON_REFUNDABLE_NOTICE}</p>
-          <button onClick={acceptQuote}>Accept</button>
-          <button onClick={() => { setQuote(null); setPicked(null); setShowForm(false) }}>Reject</button>
+        <div className="modal-backdrop" onClick={() => setQuote(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Quote: {quote.total} {quote.currency}</h3>
+            <p>
+              Service: {quote.base + (quote.surcharge ?? 0)}{(quote.surcharge ?? 0) > 0 ? ' (incl. surcharge)' : ''}
+              {' · '}
+              Transport: {quote.taxiFare}{quote.option === 'B' ? ' (taxi x2)' : ''}
+            </p>
+            <p className="notice">{NON_REFUNDABLE_NOTICE}</p>
+            <button onClick={acceptQuote}>Accept</button>
+            <button type="button" onClick={() => { setQuote(null); setPicked(null); setShowForm(false) }}>Reject</button>
+          </div>
         </div>
       )}
       {err && <p className="error">{err}</p>}

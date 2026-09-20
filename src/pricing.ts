@@ -46,8 +46,8 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
   let option: QuoteResult['option']
   let taxiFare: number
 
-  if (night) {
-    // Night: taxi = Uber estimate x 2 (round trip).
+  if (night && input.requestTaxi) {
+    // Night (23:00-07:59): taxi = Uber estimate x 2 (round trip).
     const oneWay = roundUpTo50(input.uberHighFare ?? 0)
     taxiFare = oneWay * 2
     option = 'B'
