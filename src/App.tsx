@@ -3,6 +3,7 @@ import { Booking, CustomerInfo, Page } from './types'
 import CalendarPage from './pages/CalendarPage'
 import MapPage from './pages/MapPage'
 import ProfilePage from './pages/ProfilePage'
+import ItemsPage from './pages/ItemsPage'
 import AdminPage from './pages/AdminPage'
 import WalletGate from './components/WalletGate'
 import { API } from './api'
@@ -96,13 +97,15 @@ export default function App() {
           )
         )}
         {page === 'map' && <MapPage bookings={bookings} isAdmin={isAdmin} username={user.username} adminPos={adminPos} />}
+        {page === 'items' && <ItemsPage username={user.username} />}
         {page === 'profile' && <ProfilePage user={user} isAdmin={isAdmin} />}
         <nav className="bottom-nav">
           <button onClick={() => setPage('calendar')}>📅 Calendar</button>
           <button onClick={() => setPage('map')}>🗺️ Map</button>
           {isAdmin
             ? <button onClick={() => setPage('customers')}>👥 Customers</button>
-            : <button onClick={() => setPage('profile')}>👤 Info</button>}
+            : <button onClick={() => setPage('items')}>🛒 Items</button>}
+          <button onClick={() => setPage('profile')}>👤 Info</button>
         </nav>
       </WalletGate>
     </div>

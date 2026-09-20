@@ -12,6 +12,22 @@ button { cursor: pointer; background: #2f6fed; color: #fff; border: 0; border-ra
 button.secondary { background: #39424e; }
 input, textarea, select { padding: 10px; border-radius: 6px; border: 1px solid #444; background: #1b1b1b; color: #eee; font-size: 14px; box-sizing: border-box; }
 .calendar form, .profile, .admin, .quote { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+/* ---- Items page ---- */
+.items-page { display: flex; flex-direction: column; gap: 8px; margin-top: 16px; padding: 0 4px 16px; }
+.item-row { display: flex; align-items: center; gap: 10px; background: #1c2230; border: 1px solid #2a3245; border-radius: 10px; padding: 10px 12px; cursor: pointer; }
+.item-row input[type="checkbox"] { width: 20px; height: 20px; accent-color: #4da3ff; flex-shrink: 0; }
+.item-emoji { font-size: 18px; }
+.item-label { flex: 1; font-size: 15px; }
+.item-qty { background: #11151f; color: #eee; border: 1px solid #2a3245; border-radius: 8px; padding: 6px 8px; font-size: 15px; }
+.item-row .item-qty:disabled { opacity: 0.45; }
+.item-price { font-weight: bold; color: #7ee787; min-width: 64px; text-align: right; }
+.items-total { display: flex; justify-content: space-between; align-items: center; padding: 12px 12px; font-size: 17px; font-weight: bold; border-top: 1px solid #2a3245; margin-top: 4px; }
+.items-total .item-price { font-size: 20px; }
+.items-upload { padding: 12px; border-radius: 10px; border: none; background: #4da3ff; color: #fff; font-size: 15px; font-weight: bold; }
+.items-upload:disabled { background: #3a4356; color: #8a93a5; }
+.items-done { background: #12351c; border: 1px solid #2ea043; color: #7ee787; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
+.items-error { background: #3a1520; border: 1px solid #f85149; color: #ff9b97; border-radius: 10px; padding: 10px 12px; font-size: 14px; }
 .quote .notice { color: #f66; font-size: 13px; }
 .map.greyed { filter: grayscale(1); opacity: 0.4; text-align: center; padding: 60px 0; }
 .booking { display: flex; justify-content: space-between; gap: 8px; padding: 10px; border: 1px solid #333; border-radius: 6px; margin-bottom: 8px; font-size: 13px; }

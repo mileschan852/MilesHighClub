@@ -222,6 +222,26 @@ export const API = {
     return bookingToApp(data as DbBooking)
   },
 
+  // Items page: store the order + receipt image in Supabase. The receipt file
+  // goes to the `receipts` storage bucket under item-orders/, and the order
+  // row lands in `item_orders` (see schema/ item_orders migration).
+  async uploadItemReceipt(username: string, items: string[], total: number, file: File): Promise<string> {
+    const path = `item-orders/${username}-${Date.now()}-${file.name.replace(/[^\w.-]/g, '_')}`
+    const { error: upErr } = await supabase.storage.from('receipts').upload(path, file, { upsert: true })
+    if (upErr) throw new Error(upErr.message)
+    const { data } = supabase.storage.from('receipts').getPublicUrl(path)
+    const publicUrl = data?.publicUrl ?? ''
+    const { error } = await supabase.from('item_orders').insert({
+      username,
+      items,
+      total,
+      receipt_url: publicUrl,
+      status: 'pending',
+    })
+    if (error) throw new Error(error.message)
+    return publicUrl
+  },
+
   async saveAdminLocation(lat: number, lng: number): Promise<void> {
     const u = (window as any).Telegram?.WebApp?.initDataUnsafe?.user
     const username = (u?.username ?? '').toLowerCase()
