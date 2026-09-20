@@ -1,12 +1,11 @@
 import { Booking, CustomerInfo } from '../types'
 import { API } from '../api'
-import { UNIQUE_MTR_STATIONS } from '../mtr'
+import { UNIQUE_MTR_STATIONS, MTR_LINE_COLORS } from '../mtr'
 import { useEffect, useMemo, useState } from 'react'
 
-// Admin page: 3rd bottom-nav button. Shows the customer list with an
-// "Add Customer" button on top (adds by Telegram @username). Tapping a
-// customer shows their info with labeled inputs; surcharge is admin-only
-// and is added to quotes.
+// Admin page: 3rd bottom-nav button. Shows the customer list (alphabetical)
+// with an "Add Customer" button on top. Tapping a customer opens their info
+// in a centered pop-up modal; surcharge is admin-only and is added to quotes.
 export default function AdminPage({ customers, onUpdate }: {
   customers: CustomerInfo[]
   onUpdate: () => void
@@ -19,6 +18,17 @@ export default function AdminPage({ customers, onUpdate }: {
   const [adding, setAdding] = useState(false)
   const [newUsername, setNewUsername] = useState('')
   const [err, setErr] = useState('')
+  const [confirmRemove, setConfirmRemove] = useState(false)
+
+  // Alphabetical by name (fallback to username for unnamed rows).
+  const sorted = useMemo(
+    () => [...customers].sort((a, b) => {
+      const ka = (a.name || a.username || '').toLowerCase()
+      const kb = (b.name || b.username || '').toLowerCase()
+      return ka.localeCompare(kb)
+    }),
+    [customers],
+  )
 
   function normalizeUsername(raw: string) {
     return raw.trim().replace(/^@/, '').toLowerCase()
@@ -39,6 +49,18 @@ export default function AdminPage({ customers, onUpdate }: {
     }
   }
 
+  async function removeCustomer() {
+    if (!selected) return
+    try {
+      await API.removeCustomer(selected.username)
+      setSelected(null)
+      setConfirmRemove(false)
+      onUpdate()
+    } catch (e: any) {
+      setErr(e.message)
+    }
+  }
+
   function field(label: string, value: string | number, onChange: (v: string) => void, type = 'text') {
     return (
       <label className="field">
@@ -47,6 +69,8 @@ export default function AdminPage({ customers, onUpdate }: {
       </label>
     )
   }
+
+  const address = [selected?.streetNumber, selected?.streetName].filter(Boolean).join(' ')
 
   return (
     <div className="admin">
@@ -61,43 +85,76 @@ export default function AdminPage({ customers, onUpdate }: {
         </div>
       )}
       {customers.length === 0 && !adding && <p className="muted">No customers yet. Add one with their Telegram @username.</p>}
-      {customers.map((c) => (
-        <button key={c.username || c.telegramUserId} className="customer-row" onClick={() => setSelected({ ...c })}>
-          👤 {c.name} · {c.credits} credits · PassCode: {c.passcode || '-'} · Unit: {c.unit || '-'} · {c.streetNumber || '-'} {c.streetName || ''}{c.streetNumber || c.streetName ? ' St' : ''} · MTR: {c.closestMtr || '-'}
-        </button>
-      ))}
+      {sorted.map((c) => {
+        const mtrColor = MTR_LINE_COLORS[c.closestMtr ?? '']
+        return (
+          <button key={c.username || c.telegramUserId} className="customer-row" onClick={() => setSelected({ ...c })}>
+            <span className="row-line">
+              <span className="row-left"><strong>{c.name}</strong> · PassCode: {c.passcode || '-'}</span>
+              {c.closestMtr && (
+                <span className="row-right mtr-station" style={mtrColor ? { color: mtrColor, fontWeight: 'bold' } : undefined}>
+                  {c.closestMtr}
+                </span>
+              )}
+            </span>
+            <span className="row-line">
+              <span className="row-left">{[c.unit, c.streetNumber, c.streetName].filter(Boolean).join(' ') || '-'}</span>
+            </span>
+          </button>
+        )
+      })}
 
       {selected && (
-        <div className="customer-editor">
-          <h3>{selected.name}</h3>
-          <p className="muted">Telegram: @{selected.username || selected.telegramUserId}</p>
-          {field('Name', selected.name, (v) => setSelected({ ...selected, name: v }))}
-          {field('Phone number', selected.phone, (v) => setSelected({ ...selected, phone: v }))}
-          <label className="field duo">
-            <span className="field-label">Street no / name</span>
-            <span className="inputs">
-              <input className="short" maxLength={6} placeholder="No." value={selected.streetNumber} onChange={(e) => setSelected({ ...selected, streetNumber: e.target.value })} />
-              <input className="long" placeholder="Street name" value={selected.streetName} onChange={(e) => setSelected({ ...selected, streetName: e.target.value })} />
-            </span>
-          </label>
-          <label className="field">
-            <span className="field-label">Closest MTR</span>
-            <select value={selected.closestMtr} onChange={(e) => setSelected({ ...selected, closestMtr: e.target.value })}>
-              <option value="">Select MTR station</option>
-              {UNIQUE_MTR_STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
-            </select>
-          </label>
-          <label className="field duo">
-            <span className="field-label">Unit / PassCode</span>
-            <span className="inputs">
-              <input className="half" placeholder="Unit" value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} />
-              <input className="half" placeholder="PassCode" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
-            </span>
-          </label>
-          {field('Credits', selected.credits, (v) => setSelected({ ...selected, credits: +v || 0 }), 'number')}
-          {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
-          <button disabled={!dirty} onClick={async () => { await API.updateCustomer(selected); setBaseline(JSON.stringify(selected)); setSelected(null); onUpdate() }}>Save</button>
-          <button onClick={() => setSelected(null)}>Close</button>
+        <div className="modal-backdrop" onClick={() => setSelected(null)}>
+          <div className="modal customer-editor" onClick={(e) => e.stopPropagation()}>
+            <h3>{selected.name}</h3>
+            <div className="field name-credits-row">
+              <label className="field grow">
+                <span className="field-label">Username</span>
+                <input className="readonly" value={selected.username ? `@${selected.username}` : ''} readOnly disabled />
+              </label>
+              <label className="field credits-field">
+                <span className="field-label">Credits</span>
+                <input type="text" className="credits-input" maxLength={6} value={selected.credits} onChange={(e) => setSelected({ ...selected, credits: +e.target.value || 0 })} />
+              </label>
+            </div>
+            {field('Phone number', selected.phone, (v) => setSelected({ ...selected, phone: v }))}
+            <label className="field duo">
+              <span className="field-label">Street no / name</span>
+              <span className="inputs">
+                <input className="short" maxLength={6} placeholder="No." value={selected.streetNumber} onChange={(e) => setSelected({ ...selected, streetNumber: e.target.value })} />
+                <input className="long" placeholder="Street name" value={selected.streetName} onChange={(e) => setSelected({ ...selected, streetName: e.target.value })} />
+              </span>
+            </label>
+            <label className="field">
+              <span className="field-label">Closest MTR</span>
+              <select value={selected.closestMtr} onChange={(e) => setSelected({ ...selected, closestMtr: e.target.value })}>
+                <option value="">Select MTR station</option>
+                {UNIQUE_MTR_STATIONS.map((s) => (
+                  <option key={s} value={s} style={{ color: MTR_LINE_COLORS[s] ?? '#eee', fontWeight: 'bold' }}>{s}</option>
+                ))}
+              </select>
+            </label>
+            <label className="field duo">
+              <span className="field-label">Unit / PassCode</span>
+              <span className="inputs">
+                <input className="half" placeholder="Unit" value={selected.unit} onChange={(e) => setSelected({ ...selected, unit: e.target.value })} />
+                <input className="half" placeholder="PassCode" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
+              </span>
+            </label>
+            {field('Surcharge (added to quote)', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
+            {confirmRemove ? (
+              <div className="confirm-remove">
+                <span className="muted">Remove {selected.name}{address ? ` (${address})` : ''}? This deletes the user.</span>
+                <button className="danger" onClick={removeCustomer}>Confirm remove</button>
+                <button className="secondary" onClick={() => setConfirmRemove(false)}>Keep</button>
+              </div>
+            ) : (
+              <button className="danger" onClick={() => setConfirmRemove(true)}>Remove user</button>
+            )}
+            <button disabled={!dirty} onClick={async () => { await API.updateCustomer(selected); setBaseline(JSON.stringify(selected)); setSelected(null); onUpdate() }}>Save</button>
+            <button className="secondary" onClick={() => { setSelected(null); setConfirmRemove(false) }}>Close</button>
+          </div>
         </div>
       )}
       {err && <p className="error">{err}</p>}

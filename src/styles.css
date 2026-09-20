@@ -77,3 +77,27 @@ input, textarea, select { padding: 10px; border-radius: 6px; border: 1px solid #
 
 /* Map */
 .map-wrap { height: 60vh; border-radius: 8px; overflow: hidden; margin-top: 10px; }
+
+/* Name + credits on one line: username grows, credits fixed 6 digits,
+   label and input right-aligned together. */
+.name-credits-row { display: flex; gap: 10px; align-items: flex-end; }
+.name-credits-row .grow { flex: 1; min-width: 0; }
+.credits-field { flex: 0 0 auto; flex-direction: column; align-items: flex-end; gap: 2px; }
+.credits-field .field-label { flex: 0 0 auto; }
+.credits-input { width: 72px; text-align: right; font-variant-numeric: tabular-nums; }
+input.readonly, input:disabled { color: #9aa3ad; background: #15181e; border-color: #333; }
+
+/* Two-line customer rows: line 1 name/passcode left, MTR right;
+   line 2 unit + street left. */
+.customer-row { display: flex; flex-direction: column; gap: 4px; }
+.customer-row .row-line { display: flex; justify-content: space-between; gap: 8px; }
+.customer-row .row-left { text-align: left; }
+.customer-row .row-right { text-align: right; }
+
+/* Danger / confirm remove */
+button.danger { background: #a33; }
+.confirm-remove { display: flex; flex-direction: column; gap: 6px; }
+
+/* MTR station name colouring (official line colours) */
+.mtr-station { font-weight: bold; }
+select option { font-weight: bold; }

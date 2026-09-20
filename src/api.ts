@@ -112,6 +112,14 @@ export const API = {
     return c
   },
 
+  async removeCustomer(username: string): Promise<void> {
+    const { error } = await supabase
+      .from('users_list')
+      .delete()
+      .eq('username', username)
+    if (error) throw new Error(error.message)
+  },
+
   async addCustomer(username: string): Promise<CustomerInfo> {
     // Insert a fresh row. select-then-insert so it also works when the row
     // exists but only has telegram_id set (pre-username legacy rows).

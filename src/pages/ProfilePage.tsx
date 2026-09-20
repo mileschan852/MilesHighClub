@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { CustomerInfo } from '../types'
 import { API } from '../api'
-import { UNIQUE_MTR_STATIONS } from '../mtr'
+import { UNIQUE_MTR_STATIONS, MTR_LINE_COLORS } from '../mtr'
 
 export default function ProfilePage({ user }: { user: { id: number; name: string; username?: string } }) {
   const [info, setInfo] = useState<CustomerInfo | null>(null)
@@ -25,10 +25,18 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
   return (
     <div className="profile">
       <h2>Your info</h2>
-      <label className="field">
-        <span className="field-label">Name</span>
-        <input value={info.name ?? ''} onChange={(e) => setInfo({ ...info, name: e.target.value })} />
-      </label>
+      {/* Name row: username is read-only (Telegram identity), credits sits on
+          the same line, right-aligned with a 6-digit-wide input. */}
+      <div className="field name-credits-row">
+        <label className="field grow">
+          <span className="field-label">Username</span>
+          <input className="readonly" value={info.username ? `@${info.username}` : ''} readOnly disabled />
+        </label>
+        <label className="field credits-field">
+          <span className="field-label">Credits</span>
+          <input type="text" className="credits-input" maxLength={6} value={info.credits} readOnly disabled />
+        </label>
+      </div>
       <label className="field">
         <span className="field-label">Phone number</span>
         <input value={info.phone} onChange={(e) => setInfo({ ...info, phone: e.target.value })} />
@@ -44,7 +52,9 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
         <span className="field-label">Closest MTR</span>
         <select value={info.closestMtr} onChange={(e) => setInfo({ ...info, closestMtr: e.target.value })}>
           <option value="">Select MTR station</option>
-          {UNIQUE_MTR_STATIONS.map((s) => <option key={s} value={s}>{s}</option>)}
+          {UNIQUE_MTR_STATIONS.map((s) => (
+            <option key={s} value={s} style={{ color: MTR_LINE_COLORS[s] ?? '#eee', fontWeight: 'bold' }}>{s}</option>
+          ))}
         </select>
       </label>
       <label className="field duo">
@@ -54,7 +64,6 @@ export default function ProfilePage({ user }: { user: { id: number; name: string
           <input className="half" placeholder="PassCode" value={info.passcode} onChange={(e) => setInfo({ ...info, passcode: e.target.value })} />
         </span>
       </label>
-      <p>{info.credits} credits left</p>
       <button disabled={!dirty} onClick={async () => { await API.updateCustomer(info); setBaseline(JSON.stringify(info)) }}>Save</button>
     </div>
   )
