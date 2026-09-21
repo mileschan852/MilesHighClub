@@ -128,3 +128,13 @@ button.danger { background: #a33; }
 /* MTR station name colouring (official line colours) */
 .mtr-station { font-weight: bold; }
 select option { font-weight: bold; }
+
+/* Admin Clients/Orders tabs */
+.admin-tabs { display: flex; gap: 8px; margin-bottom: 8px; }
+.admin-tabs button { flex: 1; background: #22222c; border: 1px solid #444; }
+.admin-tabs button.active { background: #2f6fed; border-color: #2f6fed; }
+.orders-list { display: flex; flex-direction: column; margin-top: 8px; }
+.order-items { margin: 4px 0 4px 18px; font-size: 14px; }
+.order-total { font-size: 15px; }
+.show-items-field input[type="checkbox"] { width: 22px; height: 22px; accent-color: #4da3ff; }
+.show-items-field { justify-content: flex-start; }

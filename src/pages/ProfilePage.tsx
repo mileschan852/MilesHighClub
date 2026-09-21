@@ -10,7 +10,7 @@ export default function ProfilePage({ user, isAdmin }: { user: { id: number; nam
   useEffect(() => {
     API.listCustomers().then((all) => {
       const found = all.find((c) => c.username && c.username === (user.username ?? '').toLowerCase()) ?? {
-        username: (user.username ?? '').toLowerCase(), name: user.name, phone: '', streetNumber: '', streetName: '', address: '', unit: '', passcode: '', credits: 0, surcharge: 0, surchargeMode: 'addition', closestMtr: '',
+        username: (user.username ?? '').toLowerCase(), name: user.name, phone: '', streetNumber: '', streetName: '', address: '', unit: '', passcode: '', credits: 0, surcharge: 0, surchargeMode: 'addition', closestMtr: '', showItems: false,
       }
       setInfo(found)
       setBaseline(JSON.stringify(found))

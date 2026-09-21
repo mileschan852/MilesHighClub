@@ -36,4 +36,15 @@ export interface CustomerInfo {
   surcharge: number // admin-only extra applied to quotes
   surchargeMode: 'per_person' | 'addition' | 'fixed' // how the surcharge applies
   closestMtr: string // closest MTR station, part of the address
+  showItems: boolean // admin toggle: whether this user may open the Items page
+}
+
+export interface ItemOrder {
+  id: string
+  username: string
+  items: string[]
+  total: number
+  receiptUrl?: string | null
+  status: string
+  createdAt: string
 }

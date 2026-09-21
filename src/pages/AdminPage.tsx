@@ -1,15 +1,19 @@
-import { Booking, CustomerInfo } from '../types'
+import { Booking, CustomerInfo, ItemOrder } from '../types'
 import { API } from '../api'
 import { UNIQUE_MTR_STATIONS, MTR_LINE_COLORS } from '../mtr'
 import { useEffect, useMemo, useState } from 'react'
 
-// Admin page: 3rd bottom-nav button. Shows the customer list (alphabetical)
-// with an "Add Customer" button on top. Tapping a customer opens their info
+// Admin page: 3rd bottom-nav button. Two tabs: Clients (list + editor modal)
+// and Orders (item orders with receipts). Tapping a customer opens their info
 // in a centered pop-up modal; surcharge is admin-only and is added to quotes.
-export default function AdminPage({ customers, onUpdate }: {
+export default function AdminPage({ customers, bookings, onUpdate }: {
   customers: CustomerInfo[]
+  bookings: Booking[]
   onUpdate: () => void
 }) {
+  const [tab, setTab] = useState<'clients' | 'orders'>('clients')
+  const [orders, setOrders] = useState<ItemOrder[]>([])
+  const [orderDetail, setOrderDetail] = useState<ItemOrder | null>(null)
   const [selected, setSelected] = useState<CustomerInfo | null>(null)
   const [baseline, setBaseline] = useState('')
   // Save stays disabled until any field actually changed from the loaded state.
@@ -19,6 +23,21 @@ export default function AdminPage({ customers, onUpdate }: {
   const [newUsername, setNewUsername] = useState('')
   const [err, setErr] = useState('')
   const [confirmRemove, setConfirmRemove] = useState(false)
+
+  // Load orders when the Orders tab opens.
+  useEffect(() => {
+    if (tab === 'orders') API.listItemOrders().then(setOrders).catch((e: any) => setErr(e.message))
+  }, [tab])
+
+  async function completeOrder(id: string) {
+    try {
+      await API.completeItemOrder(id)
+      setOrders((o) => o.filter((x) => x.id !== id))
+      setOrderDetail(null)
+    } catch (e: any) {
+      setErr(e.message)
+    }
+  }
 
   // Alphabetical by name (fallback to username for unnamed rows).
   const sorted = useMemo(
@@ -74,6 +93,43 @@ export default function AdminPage({ customers, onUpdate }: {
 
   return (
     <div className="admin">
+      {/* Clients / Orders switcher */}
+      <div className="admin-tabs">
+        <button className={tab === 'clients' ? 'active' : ''} onClick={() => setTab('clients')}>👥 Clients</button>
+        <button className={tab === 'orders' ? 'active' : ''} onClick={() => setTab('orders')}>📦 Orders</button>
+      </div>
+      {tab === 'orders' ? (
+        <div className="orders-list">
+          {orders.length === 0 && <p className="muted">No item orders.</p>}
+          {orders.map((o) => (
+            <button key={o.id} className="customer-row" onClick={() => setOrderDetail(o)}>
+              <span className="row-line">
+                <span className="row-left"><strong>{o.username}</strong></span>
+                <span className="row-right item-price">${o.total}</span>
+              </span>
+              <span className="row-line">
+                <span className="row-left muted">{o.items.join(', ')}</span>
+                <span className="row-right muted">{new Date(o.createdAt).toLocaleString('en-HK')}</span>
+              </span>
+            </button>
+          ))}
+          {orderDetail && (
+            <div className="modal-backdrop" onClick={() => setOrderDetail(null)}>
+              <div className="modal customer-editor" onClick={(e) => e.stopPropagation()}>
+                <h3>Order - @{orderDetail.username}</h3>
+                <ul className="order-items">{orderDetail.items.map((it, i) => <li key={i}>{it}</li>)}</ul>
+                <p className="order-total">Total: <span className="item-price">${orderDetail.total}</span></p>
+                {orderDetail.receiptUrl && (
+                  <a href={orderDetail.receiptUrl} target="_blank" rel="noreferrer">View receipt</a>
+                )}
+                <button onClick={() => completeOrder(orderDetail.id)}>Complete (delete order)</button>
+                <button className="secondary" onClick={() => setOrderDetail(null)}>Close</button>
+              </div>
+            </div>
+          )}
+        </div>
+      ) : (
+        <>
       <h2>Customers</h2>
       {!adding && <button className="add-customer" onClick={() => setAdding(true)}>➕ Add Customer</button>}
       {adding && (
@@ -142,14 +198,22 @@ export default function AdminPage({ customers, onUpdate }: {
                 <input className="half" placeholder="PassCode" value={selected.passcode} onChange={(e) => setSelected({ ...selected, passcode: e.target.value })} />
               </span>
             </label>
-            {field('Surcharge amount', selected.surcharge, (v) => setSelected({ ...selected, surcharge: +v || 0 }), 'number')}
-            <label className="field">
-              <span className="field-label">Surcharge mode</span>
-              <select value={selected.surchargeMode ?? 'addition'} onChange={(e) => setSelected({ ...selected, surchargeMode: e.target.value as CustomerInfo['surchargeMode'] })}>
-                <option value="per_person">/person (per head count)</option>
-                <option value="addition">Addition (add to total, negative = discount)</option>
-                <option value="fixed">Fixed (replace total)</option>
-              </select>
+            {/* Surcharge amount + type share one line, type right after amount */}
+            <label className="field duo">
+              <span className="field-label">Surcharge/type</span>
+              <span className="inputs">
+                <input className="short" type="number" value={selected.surcharge} onChange={(e) => setSelected({ ...selected, surcharge: +e.target.value || 0 })} />
+                <select className="long" value={selected.surchargeMode ?? 'addition'} onChange={(e) => setSelected({ ...selected, surchargeMode: e.target.value as CustomerInfo['surchargeMode'] })}>
+                  <option value="per_person">/person</option>
+                  <option value="addition">Addition</option>
+                  <option value="fixed">Fixed</option>
+                </select>
+              </span>
+            </label>
+            {/* Show items: when off, the Items page is greyed out for this user */}
+            <label className="field show-items-field">
+              <span className="field-label">Show items</span>
+              <input type="checkbox" checked={selected.showItems} onChange={(e) => setSelected({ ...selected, showItems: e.target.checked })} />
             </label>
             {confirmRemove && (
               <div className="confirm-remove">
@@ -167,6 +231,8 @@ export default function AdminPage({ customers, onUpdate }: {
         </div>
       )}
       {err && <p className="error">{err}</p>}
+        </>
+      )}
     </div>
   )
 }

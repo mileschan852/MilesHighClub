@@ -1,5 +1,5 @@
 import { supabase } from './supabase'
-import { Booking, CustomerInfo } from './types'
+import { Booking, CustomerInfo, ItemOrder } from './types'
 import { calculateQuote, QuoteResult } from './pricing'
 import { DbBooking, DbUser } from './supabase'
 
@@ -49,6 +49,7 @@ function userToCustomer(row: DbUser): CustomerInfo {
     surcharge: row.surcharge ?? 0,
     surchargeMode: (row.surcharge_mode as CustomerInfo['surchargeMode']) ?? 'addition',
     closestMtr: row.closest_mtr ?? '',
+    showItems: (row as any).show_items ?? false,
   }
 }
 
@@ -109,7 +110,7 @@ export const API = {
   async updateCustomer(c: CustomerInfo): Promise<CustomerInfo> {
     const { error } = await supabase
       .from('users_list')
-      .update({ name: c.name || null, phone: c.phone, street_number: c.streetNumber, street_name: c.streetName, address: c.address, unit: c.unit, passcode: c.passcode, credits: c.credits, surcharge: c.surcharge, surcharge_mode: c.surchargeMode, closest_mtr: (c.closestMtr || null) })
+      .update({ name: c.name || null, phone: c.phone, street_number: c.streetNumber, street_name: c.streetName, address: c.address, unit: c.unit, passcode: c.passcode, credits: c.credits, surcharge: c.surcharge, surcharge_mode: c.surchargeMode, closest_mtr: (c.closestMtr || null), show_items: c.showItems })
       .eq('username', c.username)
     if (error) throw new Error(error.message)
     return c
@@ -240,6 +241,30 @@ export const API = {
     })
     if (error) throw new Error(error.message)
     return publicUrl
+  },
+
+  // Admin orders list (Items page orders). New orders first.
+  async listItemOrders(): Promise<ItemOrder[]> {
+    const { data, error } = await supabase
+      .from('item_orders')
+      .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw new Error(error.message)
+    return (data as any[]).map((r) => ({
+      id: r.id,
+      username: r.username,
+      items: Array.isArray(r.items) ? r.items : [],
+      total: r.total ?? 0,
+      receiptUrl: r.receipt_url ?? null,
+      status: r.status ?? 'pending',
+      createdAt: r.created_at,
+    }))
+  },
+
+  // Completing an order deletes it, per spec.
+  async completeItemOrder(id: string): Promise<void> {
+    const { error } = await supabase.from('item_orders').delete().eq('id', id)
+    if (error) throw new Error(error.message)
   },
 
   async saveAdminLocation(lat: number, lng: number): Promise<void> {

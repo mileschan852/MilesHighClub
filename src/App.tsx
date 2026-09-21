@@ -83,7 +83,7 @@ export default function App() {
   return (
     <div className="app">
       <WalletGate>
-        {isAdmin && page === 'customers' && <AdminPage customers={customers} onUpdate={async () => {
+        {isAdmin && page === 'customers' && <AdminPage customers={customers} bookings={bookings} onUpdate={async () => {
           setCustomers(await API.listCustomers())
         }} />}
         {page === 'calendar' && (
@@ -97,15 +97,18 @@ export default function App() {
           )
         )}
         {page === 'map' && <MapPage bookings={bookings} isAdmin={isAdmin} username={user.username} adminPos={adminPos} />}
-        {page === 'items' && <ItemsPage username={user.username} />}
+        {page === 'items' && (isAdmin || customers.some((c) => c.username === (user.username ?? '').toLowerCase() && c.showItems))
+          ? <ItemsPage username={user.username} />
+          : <div className="locked"><h2>🛒 Items locked</h2><p>Items are not enabled for your account yet. Contact Miles.</p></div>}
         {page === 'profile' && <ProfilePage user={user} isAdmin={isAdmin} />}
         <nav className="bottom-nav">
-          <button onClick={() => setPage('calendar')}>📅 Calendar</button>
-          <button onClick={() => setPage('map')}>🗺️ Map</button>
+          <button className={page === 'calendar' ? 'active' : ''} onClick={() => setPage('calendar')}>📅 Calendar</button>
+          <button className={page === 'map' ? 'active' : ''} onClick={() => setPage('map')}>🗺️ Map</button>
+          {/* Items sits before the clients list, for admin and clients alike */}
+          <button className={page === 'items' ? 'active' : ''} onClick={() => setPage('items')}>🛒 Items</button>
           {isAdmin
-            ? <button onClick={() => setPage('customers')}>👥 Customers</button>
-            : <button onClick={() => setPage('items')}>🛒 Items</button>}
-          <button onClick={() => setPage('profile')}>👤 Info</button>
+            ? <button className={page === 'customers' ? 'active' : ''} onClick={() => setPage('customers')}>👥 Clients</button>
+            : <button className={page === 'profile' ? 'active' : ''} onClick={() => setPage('profile')}>👤 Info</button>}
         </nav>
       </WalletGate>
     </div>
