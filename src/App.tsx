@@ -97,16 +97,15 @@ export default function App() {
           )
         )}
         {page === 'map' && <MapPage bookings={bookings} isAdmin={isAdmin} username={user.username} adminPos={adminPos} />}
-        {page === 'items' && <ItemsPage username={user.username} />}
+        {page === 'items' && <ItemsPage username={user.username} showItems={isAdmin || customers.some((c) => c.username === (user.username ?? '').toLowerCase() && c.showItems)} />}
         {page === 'profile' && <ProfilePage user={user} isAdmin={isAdmin} />}
         <nav className="bottom-nav">
           <button className={page === 'calendar' ? 'active' : ''} onClick={() => setPage('calendar')}>📅 Calendar</button>
           <button className={page === 'map' ? 'active' : ''} onClick={() => setPage('map')}>🗺️ Map</button>
-          {/* Items sits before the clients list; greyed out for clients whose
-              admin has not checked "show items" (admins always get access) */}
+          {/* Items sits before the clients list; always enabled. Clients with
+              "show items" unchecked see only the prepay options inside the page */}
           <button
             className={page === 'items' ? 'active' : ''}
-            disabled={!isAdmin && !customers.some((c) => c.username === (user.username ?? '').toLowerCase() && c.showItems)}
             onClick={() => setPage('items')}
           >🛒 Items</button>
           {isAdmin

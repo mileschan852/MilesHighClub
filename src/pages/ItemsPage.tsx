@@ -19,7 +19,7 @@ const FIXED_ITEMS = [
   { label: '🏦 Prepay 3300', price: 3000 },
 ]
 
-export default function ItemsPage({ username = '' }: { username?: string }) {
+export default function ItemsPage({ username = '', showItems = false }: { username?: string; showItems?: boolean }) {
   const [iceTier, setIceTier] = useState(ICE_TIERS[0].qty)
   const [checked, setChecked] = useState<Record<string, boolean>>({})
   const [submitting, setSubmitting] = useState(false)
@@ -29,10 +29,13 @@ export default function ItemsPage({ username = '' }: { username?: string }) {
 
   const total = useMemo(() => {
     let t = 0
-    if (checked.ice) t += ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0
-    FIXED_ITEMS.forEach((it, i) => { if (checked['f' + i]) t += it.price })
+    if (showItems && checked.ice) t += ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0
+    FIXED_ITEMS.forEach((it, i) => {
+      // Prepay rows (last two) are always visible; the rest need showItems
+      if (checked['f' + i] && (showItems || i >= FIXED_ITEMS.length - 2)) t += it.price
+    })
     return t
-  }, [checked, iceTier])
+  }, [checked, iceTier, showItems])
 
   const anyChecked = total > 0
 
@@ -50,8 +53,10 @@ export default function ItemsPage({ username = '' }: { username?: string }) {
     setSubmitting(true)
     try {
       const items: string[] = []
-      if (checked.ice) items.push(`🧊 x${iceTier}`)
-      FIXED_ITEMS.forEach((it, i) => { if (checked['f' + i]) items.push(it.label) })
+      if (showItems && checked.ice) items.push(`🧊 x${iceTier}`)
+      FIXED_ITEMS.forEach((it, i) => {
+        if (checked['f' + i] && (showItems || i >= FIXED_ITEMS.length - 2)) items.push(it.label)
+      })
       const url = await API.uploadItemReceipt(username, items, total, file)
       setDone(`Order submitted: ${items.join(', ')} = $${total}. Receipt received, Miles will confirm shortly.`)
       setChecked({})
@@ -67,23 +72,25 @@ export default function ItemsPage({ username = '' }: { username?: string }) {
     <div className="items-page">
       <h2>Items</h2>
       {done && <div className="items-done">{done}</div>}
-      <label className="item-row">
-        <input type="checkbox" checked={!!checked.ice} onChange={() => toggle('ice')} />
-        <span className="item-emoji">🧊</span>
-        <select
-          className="item-qty"
-          value={iceTier}
-          disabled={!checked.ice}
-          onChange={(e) => setIceTier(Number(e.target.value))}
-        >
+      {showItems && (
+        <label className="item-row">
+          <input type="checkbox" checked={!!checked.ice} onChange={() => toggle('ice')} />
+          <span className="item-emoji">🧊</span>
+          <select
+            className="item-qty"
+            value={iceTier}
+            disabled={!checked.ice}
+            onChange={(e) => setIceTier(Number(e.target.value))}
+          >
           {ICE_TIERS.map((t) => (
             <option key={t.qty} value={t.qty}>x{t.qty}</option>
           ))}
-        </select>
-        <span className="item-price" style={{ marginLeft: 'auto' }}>${checked.ice ? (ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0) : ICE_TIERS.find((i) => i.qty === iceTier)?.price}</span>
-      </label>
+          </select>
+          <span className="item-price" style={{ marginLeft: 'auto' }}>${checked.ice ? (ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0) : ICE_TIERS.find((i) => i.qty === iceTier)?.price}</span>
+        </label>
+      )}
       {FIXED_ITEMS.map((it, i) => (
-        <label className="item-row" key={i}>
+        <label className="item-row" key={i} style={!(showItems || i >= FIXED_ITEMS.length - 2) ? { display: 'none' } : undefined}>
           <input type="checkbox" checked={!!checked['f' + i]} onChange={() => toggle('f' + i)} />
           <span className="item-label">{it.label}</span>
           <span className="item-price">${it.price}</span>
