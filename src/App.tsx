@@ -5,7 +5,6 @@ import MapPage from './pages/MapPage'
 import ProfilePage from './pages/ProfilePage'
 import ItemsPage from './pages/ItemsPage'
 import AdminPage from './pages/AdminPage'
-import WalletGate from './components/WalletGate'
 import { API } from './api'
 
 // Admin access: these Telegram usernames (case-insensitive) unlock admin mode.
@@ -82,7 +81,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <WalletGate>
+      <>
         {isAdmin && page === 'customers' && <AdminPage customers={customers} bookings={bookings} onUpdate={async () => {
           setCustomers(await API.listCustomers())
         }} />}
@@ -112,7 +111,7 @@ export default function App() {
             ? <button className={page === 'customers' ? 'active' : ''} onClick={() => setPage('customers')}>👥 Clients</button>
             : <button className={page === 'profile' ? 'active' : ''} onClick={() => setPage('profile')}>👤 Info</button>}
         </nav>
-      </WalletGate>
+      </>
     </div>
   )
 }
