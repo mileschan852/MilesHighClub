@@ -25,7 +25,8 @@ export default {
     const path = url.pathname
 
     // --- auth: verify Telegram initData ---
-    const user = await verifyTelegram(req, env)
+    const rawBody = await req.text().catch(() => '')
+    const user = await verifyTelegram(req, env, rawBody)
     if (!user) return json({ error: 'unauthorized' }, 401)
     const isAdmin = String(user.id) === env.ADMIN_TELEGRAM_ID
 
@@ -91,7 +92,7 @@ export default {
     // Notification relay: any authenticated user can push a message to the
     // admin chat (used for new bookings and new item orders).
     if (path === '/api/notify' && req.method === 'POST') {
-      const { text } = await req.json<{ text?: string }>()
+      const { text } = JSON.parse(rawBody || '{}') as { text?: string }
       if (text) await notifyAdmin(env, String(text).slice(0, 1000))
       return json({ ok: true })
     }
@@ -100,10 +101,14 @@ export default {
   },
 }
 
-async function verifyTelegram(req: Request, env: Env) {
+async function verifyTelegram(req: Request, env: Env, rawBody?: string) {
   // See https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
-  const body = await req.json<{ initData?: string }>().catch(() => ({ initData: undefined }))
-  const initData = body.initData || req.headers.get('x-init-data') || ''
+  const headerData = req.headers.get('x-init-data') || ''
+  let initData = rawBody ?? headerData
+  try {
+    const parsed = JSON.parse(rawBody ?? '') as any
+    if (parsed && typeof parsed.initData === 'string') initData = parsed.initData
+  } catch {}
   if (!initData || !env.TELEGRAM_BOT_TOKEN) return null
   const params = new URLSearchParams(initData)
   const hash = params.get('hash')!
