@@ -12,11 +12,11 @@ const ICE_TIERS = [
 
 // Fixed-price items: checkbox adds the price to the total.
 const FIXED_ITEMS = [
-  { emoji: '💙', label: '💙 x4', price: 250 },
-  { emoji: '😴', label: '😴 x10', price: 250 },
-  { emoji: '💉', label: '💉 x100', price: 250 },
-  { emoji: '🏦', label: 'Prepay 1050', price: 1000 },
-  { emoji: '🏦', label: 'Prepay 3300', price: 3000 },
+  { label: '💙 x4', price: 250 },
+  { label: '😴 x10', price: 250 },
+  { label: '💉 x100', price: 250 },
+  { label: '🏦 Prepay 1050', price: 1000 },
+  { label: '🏦 Prepay 3300', price: 3000 },
 ]
 
 export default function ItemsPage({ username = '' }: { username?: string }) {
@@ -80,12 +80,11 @@ export default function ItemsPage({ username = '' }: { username?: string }) {
             <option key={t.qty} value={t.qty}>x{t.qty}</option>
           ))}
         </select>
-        <span className="item-price">${checked.ice ? (ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0) : ICE_TIERS.find((i) => i.qty === iceTier)?.price}</span>
+        <span className="item-price" style={{ marginLeft: 'auto' }}>${checked.ice ? (ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0) : ICE_TIERS.find((i) => i.qty === iceTier)?.price}</span>
       </label>
       {FIXED_ITEMS.map((it, i) => (
         <label className="item-row" key={i}>
           <input type="checkbox" checked={!!checked['f' + i]} onChange={() => toggle('f' + i)} />
-          <span className="item-emoji">{it.emoji}</span>
           <span className="item-label">{it.label}</span>
           <span className="item-price">${it.price}</span>
         </label>
@@ -96,7 +95,7 @@ export default function ItemsPage({ username = '' }: { username?: string }) {
       </div>
       {error && <div className="items-error">⚠️ {error}</div>}
       <button className="items-upload" disabled={!anyChecked || submitting} onClick={submit}>
-        {submitting ? 'Uploading...' : 'Upload transaction receipt'}
+        {submitting ? 'Uploading...' : 'Upload transaction receipt to confirm order'}
       </button>
       <input
         ref={fileRef}

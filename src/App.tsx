@@ -97,15 +97,18 @@ export default function App() {
           )
         )}
         {page === 'map' && <MapPage bookings={bookings} isAdmin={isAdmin} username={user.username} adminPos={adminPos} />}
-        {page === 'items' && (isAdmin || customers.some((c) => c.username === (user.username ?? '').toLowerCase() && c.showItems))
-          ? <ItemsPage username={user.username} />
-          : <div className="locked"><h2>🛒 Items locked</h2><p>Items are not enabled for your account yet. Contact Miles.</p></div>}
+        {page === 'items' && <ItemsPage username={user.username} />}
         {page === 'profile' && <ProfilePage user={user} isAdmin={isAdmin} />}
         <nav className="bottom-nav">
           <button className={page === 'calendar' ? 'active' : ''} onClick={() => setPage('calendar')}>📅 Calendar</button>
           <button className={page === 'map' ? 'active' : ''} onClick={() => setPage('map')}>🗺️ Map</button>
-          {/* Items sits before the clients list, for admin and clients alike */}
-          <button className={page === 'items' ? 'active' : ''} onClick={() => setPage('items')}>🛒 Items</button>
+          {/* Items sits before the clients list; greyed out for clients whose
+              admin has not checked "show items" (admins always get access) */}
+          <button
+            className={page === 'items' ? 'active' : ''}
+            disabled={!isAdmin && !customers.some((c) => c.username === (user.username ?? '').toLowerCase() && c.showItems)}
+            onClick={() => setPage('items')}
+          >🛒 Items</button>
           {isAdmin
             ? <button className={page === 'customers' ? 'active' : ''} onClick={() => setPage('customers')}>👥 Clients</button>
             : <button className={page === 'profile' ? 'active' : ''} onClick={() => setPage('profile')}>👤 Info</button>}

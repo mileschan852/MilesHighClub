@@ -5,6 +5,7 @@ a { color: #7db4ff; }
 .bottom-nav { position: fixed; bottom: 0; left: 0; right: 0; display: flex; background: #1b1b1b; border-top: 1px solid #333; }
 .bottom-nav button { flex: 1; padding: 14px 0; background: none; border: 0; color: #eee; font-size: 14px; }
 .bottom-nav button.active { color: #fff; background: #263041; }
+.bottom-nav button:disabled { color: #5a6270; }
 h1, h2, h3 { margin: 8px 0; }
 .muted { color: #888; font-size: 13px; }
 .error { color: #ff6b6b; }
