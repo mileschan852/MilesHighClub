@@ -234,6 +234,7 @@ export const API = {
     }
     const { data, error } = await supabase.from('bookings').insert(row).select().single()
     if (error) throw new Error(error.message)
+    notifyAdminBot(`New booking: ${b.name}, ${start.toLocaleString('en-HK')}, ${b.people}p, ${b.quote.total} HKD`).catch(() => {})
     return bookingToApp(data as DbBooking)
   },
 
@@ -254,6 +255,7 @@ export const API = {
       status: 'pending',
     })
     if (error) throw new Error(error.message)
+    notifyAdminBot(`New item order: ${username}, ${items.join(', ')}, ${total} HKD`).catch(() => {})
     return publicUrl
   },
 
@@ -362,3 +364,17 @@ export const API = {
 }
 
 export { calculateQuote }
+
+// Fire-and-forget: notify the admin's Telegram chat via the worker relay.
+export async function notifyAdminBot(text: string): Promise<void> {
+  try {
+    const initData = (window as any).Telegram?.WebApp?.initData || ''
+    await fetch('/api/notify', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ initData, text }),
+    })
+  } catch {
+    // notifications are best-effort; never block the user flow
+  }
+}

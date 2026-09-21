@@ -88,6 +88,14 @@ export default {
       return json(c)
     }
 
+    // Notification relay: any authenticated user can push a message to the
+    // admin chat (used for new bookings and new item orders).
+    if (path === '/api/notify' && req.method === 'POST') {
+      const { text } = await req.json<{ text?: string }>()
+      if (text) await notifyAdmin(env, String(text).slice(0, 1000))
+      return json({ ok: true })
+    }
+
     return json({ error: 'not found' }, 404)
   },
 }
