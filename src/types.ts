@@ -12,11 +12,13 @@ export interface Booking {
   location: string
   quote: { base: number; option: string; taxiFare: number; total: number; currency: string }
   status: 'pending' | 'accepted' | 'rejected' | 'blocked'
-  // Quote-then-receipt flow:
-  //   'quoted'   - slot shown yellow to everyone (info only for admin)
-  //   'receipt'  - admin accepted, waiting for the client's payment receipt
-  //   'confirmed' - receipt accepted by admin (green)
-  receiptStatus?: 'requested' | 'confirmed' | null
+  // Adjusted transport amount for taxi quotes (set when admin accepts on the block).
+  quote_base?: number | null
+  // Client receipt submission phase after admin accept:
+  //   null / 'requested' - admin accepted, client must upload the receipt (yellow)
+  //   'submitted'        - client uploaded, admin must accept/reject the receipt (blue)
+  //   'confirmed'        - admin accepted the receipt (green to admin, red to others)
+  receiptStatus?: 'requested' | 'submitted' | 'confirmed' | null
   receiptImageUrl?: string | null
 }
 

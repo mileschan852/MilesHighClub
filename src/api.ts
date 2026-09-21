@@ -20,7 +20,7 @@ function bookingToApp(row: DbBooking): Booking {
     startISO: row.start_time,
     location: row.location,
     quote: {
-      base: row.quote_price,
+      base: (row as any).quote_base ?? row.quote_price,
       option: row.transport_option ?? '',
       taxiFare: 0,
       total: row.quote_price,
@@ -29,6 +29,7 @@ function bookingToApp(row: DbBooking): Booking {
     status: row.status,
     receiptStatus: (row as any).receipt_status ?? null,
     receiptImageUrl: (row as any).receipt_image_url ?? null,
+    quote_base: (row as any).quote_base ?? null,
   }
 }
 
@@ -154,8 +155,19 @@ export const API = {
     return bookingToApp(data as DbBooking)
   },
 
-  // Admin accepted a booking: ask the client to send the payment receipt.
-  async requestReceipt(id: string): Promise<void> {
+  // Admin accepted the quote on the block. For taxi quotes the admin first
+  // enters the adjusted transport fare; the total is updated accordingly.
+  async acceptQuote(id: string, adjustedFare?: number): Promise<void> {
+    if (typeof adjustedFare === 'number') {
+      const { data } = await supabase.from('bookings').select('quote_base').eq('id', id).maybeSingle()
+      const base = Number((data as any)?.quote_base ?? 0)
+      const { error } = await supabase
+        .from('bookings')
+        .update({ quote_price: base + adjustedFare, transport_option: 'B', receipt_status: 'requested', status: 'accepted' })
+        .eq('id', id)
+      if (error) throw new Error(error.message)
+      return
+    }
     const { error } = await supabase
       .from('bookings')
       .update({ receipt_status: 'requested', status: 'accepted' })
@@ -163,29 +175,30 @@ export const API = {
     if (error) throw new Error(error.message)
   },
 
-  // Client submitted their receipt (photo URL uploaded elsewhere).
+  // Client uploaded their receipt from the block: waiting for admin review.
   async submitReceipt(id: string, imageUrl: string): Promise<void> {
     const { error } = await supabase
       .from('bookings')
-      .update({ receipt_image_url: imageUrl, receipt_status: 'requested' })
+      .update({ receipt_image_url: imageUrl, receipt_status: 'submitted' })
       .eq('id', id)
     if (error) throw new Error(error.message)
   },
 
-  // Admin confirms the receipt: slot turns green.
+  // Admin accepted the receipt: green for admin, red for everyone else.
   async confirmReceipt(id: string): Promise<void> {
     const { error } = await supabase
       .from('bookings')
-      .update({ receipt_status: 'confirmed' })
+      .update({ receipt_status: 'confirmed', status: 'accepted' })
       .eq('id', id)
     if (error) throw new Error(error.message)
   },
 
-  // Admin adjusts the transport amount on a quoted (taxi) booking.
-  async adjustTransport(id: string, taxiFare: number, total: number): Promise<void> {
+  // Admin rejected the receipt: booking reverts to the yellow quoted state and
+  // the client must upload a new receipt.
+  async rejectReceipt(id: string): Promise<void> {
     const { error } = await supabase
       .from('bookings')
-      .update({ quote_price: total, transport_option: 'B' })
+      .update({ receipt_status: 'requested', receipt_image_url: null })
       .eq('id', id)
     if (error) throw new Error(error.message)
   },
@@ -215,6 +228,7 @@ export const API = {
       pax: b.people,
       location: b.location,
       transport_option: b.quote.option || null,
+      quote_base: b.quote.base,
       quote_price: b.quote.total,
       status: 'pending' as const,
     }

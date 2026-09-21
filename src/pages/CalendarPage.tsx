@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Booking } from '../types'
 import { API } from '../api'
+import { supabase } from '../supabase'
 import { NON_REFUNDABLE_NOTICE, isNightRate } from '../pricing'
 import { CustomerInfo } from '../types'
 import { UNIQUE_MTR_STATIONS } from '../mtr'
@@ -189,22 +190,48 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
     onBooked()
   }
 
-  // Receipt pop-up after admin accepts: client is asked to send a transaction
-  // receipt (photo) to 61898417 for the quoted amount.
+  // Receipt pop-up after admin accepts: client is asked to upload a transaction
+  // receipt (photo) of the quoted amount, directly from the block.
   const [receiptFor, setReceiptFor] = useState<Booking | null>(null)
+  const [receiptFile, setReceiptFile] = useState<File | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
-  // Admin actions on a quoted booking.
-  async function adminAdjustTransport(b: Booking) {
-    const input = window.prompt(`Adjusted transport amount for ${b.name} (current: ${b.quote.taxiFare} HKD)`, String(b.quote.taxiFare))
-    if (input === null) return
-    const fare = Math.max(0, Math.round(Number(input) || 0))
-    await API.adjustTransport(b.id, fare, b.quote.base + fare)
-    await API.requestReceipt(b.id)
+  // Admin reviewing a client's uploaded receipt (pop-up with the image).
+  const [reviewFor, setReviewFor] = useState<Booking | null>(null)
+
+  // Admin accepting a taxi quote: prompts for the adjusted transport amount.
+  const [adjustFor, setAdjustFor] = useState<Booking | null>(null)
+  const [adjustedFare, setAdjustedFare] = useState('')
+
+  // Client actions on their own block.
+  async function uploadReceipt() {
+    if (!receiptFor || !receiptFile) return
+    const path = `booking-receipts/${receiptFor.id}-${Date.now()}-${receiptFile.name.replace(/[^\w.-]/g, '_')}`
+    const { error: upErr } = await supabase.storage.from('receipts').upload(path, receiptFile, { upsert: true })
+    if (upErr) { setErr(upErr.message); return }
+    const { data } = supabase.storage.from('receipts').getPublicUrl(path)
+    await API.submitReceipt(receiptFor.id, data?.publicUrl ?? '')
+    setReceiptFor(null); setReceiptFile(null)
     onBooked()
   }
 
+  async function cancelBooking(b: Booking) {
+    await API.setBookingStatus(b.id, 'rejected')
+    onBooked()
+  }
+
+  // Admin actions on a quoted booking (all from the block).
   async function adminAccept(b: Booking) {
-    await API.requestReceipt(b.id)
+    if (b.quote.option === 'B') { setAdjustFor(b); setAdjustedFare(''); return }
+    await API.acceptQuote(b.id)
+    onBooked()
+  }
+
+  async function adminAdjustConfirm() {
+    if (!adjustFor) return
+    const fare = Math.max(0, Math.round(Number(adjustedFare) || 0))
+    await API.acceptQuote(adjustFor.id, fare)
+    setAdjustFor(null)
     onBooked()
   }
 
@@ -215,6 +242,13 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
 
   async function adminConfirmReceipt(b: Booking) {
     await API.confirmReceipt(b.id)
+    setReviewFor(null)
+    onBooked()
+  }
+
+  async function adminRejectReceipt(b: Booking) {
+    await API.rejectReceipt(b.id)
+    setReviewFor(null)
     onBooked()
   }
 
@@ -264,24 +298,61 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
             const top = (start.getHours() * 60 + start.getMinutes()) * PX_PER_MIN
             const height = Math.max(((end.getTime() - start.getTime()) / 60000) * PX_PER_MIN, 24)
             const isBlock = booking.status === 'blocked'
-            // Yellow "quoted" phase: status pending and no receipt yet requested.
+            // Phase of the quote-then-receipt flow:
+            //   quoted    - yellow, everyone sees it, info only for admin/owner
+            //   awaiting  - admin accepted, client must upload receipt (yellow)
+            //   submitted - client uploaded receipt, admin must review (blue)
+            //   confirmed - admin accepted the receipt: green to admin/owner,
+            //               red block with no info for everyone else
             const isQuoted = booking.status === 'pending' && !booking.receiptStatus
+            const isAwaiting = booking.status === 'accepted' && booking.receiptStatus === 'requested'
+            const isSubmitted = booking.receiptStatus === 'submitted'
+            const isConfirmed = booking.receiptStatus === 'confirmed'
             const mine = booking.telegramUserId === user.id || isAdmin
+            const visible = mine || isQuoted || isAwaiting
+            const phaseClass = isQuoted || isAwaiting ? 'status-quoted' : isSubmitted ? 'status-submitted' : isConfirmed ? (mine ? 'status-accepted' : 'status-hidden') : `status-${booking.status}`
+            if (!visible && !isConfirmed) return null
             return (
               <div
                 key={booking.id}
-                className={`dayview-event ${isQuoted ? 'status-quoted' : `status-${booking.status}`}`}
+                className={`dayview-event ${phaseClass}`}
                 style={{ top, height }}
+                onClick={() => {
+                  if (!mine) return
+                  if (isQuoted && isAdmin) return // uses in-block buttons
+                  if (isAwaiting && booking.telegramUserId === user.id) { setReceiptFor(booking); return }
+                  if (isSubmitted && isAdmin) { setReviewFor(booking); return }
+                }}
               >
                 {isBlock ? (
                   <strong>🚫 Not available</strong>
-                ) : mine ? (
+                ) : !visible && isConfirmed ? (
+                  // Confirmed booking seen by other clients: red block, nothing inside.
+                  <strong>Unavailable</strong>
+                ) : (
                   <>
                     <strong>{fmtHk(start)}–{fmtHk(end)}</strong>
                     <span>
-                      {isQuoted ? '⏳ Quoted' : booking.receiptStatus === 'confirmed' ? '✅ Confirmed' : booking.status === 'accepted' ? '🧾 Receipt requested' : booking.status}
+                      {isQuoted ? '⏳ Quoted' : isAwaiting ? '🧾 Upload receipt' : isSubmitted ? '📨 Receipt under review' : isConfirmed ? '✅ Confirmed' : booking.status}
                       {' · '}{booking.people}p · {booking.quote.total} HKD
                     </span>
+
+                    {/* Admin: decide the quote right on the block */}
+                    {isQuoted && isAdmin && (
+                      <span className="block-actions" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => adminAccept(booking)}>Accept</button>
+                        <button className="danger" onClick={() => adminReject(booking)}>Reject</button>
+                      </span>
+                    )}
+
+                    {/* Client: upload receipt or cancel, right on the block */}
+                    {isAwaiting && booking.telegramUserId === user.id && (
+                      <span className="block-actions" onClick={(e) => e.stopPropagation()}>
+                        <button onClick={() => setReceiptFor(booking)}>Upload transaction receipt</button>
+                        <button className="danger" onClick={() => cancelBooking(booking)}>Cancel</button>
+                      </span>
+                    )}
+
                     {booking.telegramUserId === user.id && (
                       <a
                         href={gcalUrl(booking)}
@@ -292,9 +363,6 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
                       >📅 Add to Google Calendar</a>
                     )}
                   </>
-                ) : (
-                  // Other clients see only a yellow block with no info.
-                  <strong>Reserved</strong>
                 )}
               </div>
             )
@@ -378,25 +446,66 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
       )}
       {err && <p className="error">{err}</p>}
 
-      {/* Receipt instruction pop-up: shown after the admin accepted the quote.
-          The client is asked to send a transaction receipt of the quoted amount
-          to 61898417. Tapping "I've sent it" marks the receipt as submitted. */}
+      {/* Receipt upload pop-up: shown after the admin accepted the quote.
+          The client uploads a transaction receipt photo of the quoted amount
+          directly here, or cancels the booking. */}
       {receiptFor && (
         <div className="modal-backdrop" onClick={() => setReceiptFor(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Send payment receipt</h3>
             <p>
-              Please send a transaction receipt of <strong>{receiptFor.quote.total} HKD</strong> to
-              <strong> 61898417</strong> to confirm your booking {fmtHk(new Date(receiptFor.startISO))}–{fmtHk(new Date(new Date(receiptFor.startISO).getTime() + BOOKING_MS))}.
+              Please upload a transaction receipt of <strong>{receiptFor.quote.total} HKD</strong> for your
+              booking {fmtHk(new Date(receiptFor.startISO))}–{fmtHk(new Date(new Date(receiptFor.startISO).getTime() + BOOKING_MS))}.
             </p>
-            <button onClick={() => { setReceiptFor(null); onBooked() }}>I've sent it</button>
-            <button type="button" className="secondary" onClick={() => setReceiptFor(null)}>Close</button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              style={{ display: 'none' }}
+              onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+            />
+            <button type="button" onClick={() => fileInputRef.current?.click()}>
+              {receiptFile ? `📎 ${receiptFile.name}` : 'Choose receipt photo'}
+            </button>
+            <button onClick={uploadReceipt} disabled={!receiptFile}>Submit receipt</button>
+            <button type="button" className="secondary" onClick={() => cancelBooking(receiptFor)}>Cancel booking</button>
           </div>
         </div>
       )}
 
-      {/* Admin: pending quoted bookings need a decision (taxi = adjust transport,
-          otherwise accept / reject). Accepted ones need receipt confirmation. */}
+      {/* Admin: adjust transport fare for a taxi quote before accepting */}
+      {adjustFor && (
+        <div className="modal-backdrop" onClick={() => setAdjustFor(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Adjust transport</h3>
+            <p>{adjustFor.name} · {adjustFor.quote.total} HKD total (taxi selected). Enter the adjusted transport amount.</p>
+            <label className="field">
+              <span className="field-label">Transport amount (HKD)</span>
+              <input className="short" type="number" min={0} value={adjustedFare} onChange={(e) => setAdjustedFare(e.target.value)} autoFocus />
+            </label>
+            <button onClick={adminAdjustConfirm}>Accept</button>
+            <button type="button" className="secondary" onClick={() => setAdjustFor(null)}>Cancel</button>
+          </div>
+        </div>
+      )}
+
+      {/* Admin: review the client's uploaded receipt, accept or reject it */}
+      {reviewFor && (
+        <div className="modal-backdrop" onClick={() => setReviewFor(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3>Receipt review</h3>
+            <p>{reviewFor.name} · {new Date(reviewFor.startISO).toLocaleString('en-HK')} · {reviewFor.quote.total} HKD</p>
+            {reviewFor.receiptImageUrl
+              ? <img src={reviewFor.receiptImageUrl} alt="Transaction receipt" style={{ maxWidth: '100%', borderRadius: 8 }} />
+              : <p className="muted">No receipt image stored.</p>}
+            <button onClick={() => adminConfirmReceipt(reviewFor)}>Accept</button>
+            <button type="button" className="danger" onClick={() => adminRejectReceipt(reviewFor)}>Reject</button>
+          </div>
+        </div>
+      )}
+
+      {/* Admin: pending quoted bookings also listed below the grid for a quick
+          overview (the decision itself happens on the calendar blocks). */}
       {isAdmin && (
         <div className="admin-queue">
           <h3>Pending quotes</h3>
@@ -405,19 +514,9 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
             <div key={b.id} className="booking">
               <span>{b.name} · {new Date(b.startISO).toLocaleString('en-HK')} · {b.people}p · {b.quote.total} HKD{b.quote.option === 'B' ? ' (taxi)' : ''}</span>
               <span className="booking-actions">
-                {b.quote.option === 'B'
-                  ? <button onClick={() => adminAdjustTransport(b)}>Adjust transport</button>
-                  : <button onClick={() => adminAccept(b)}>Accept</button>}
+                <button onClick={() => adminAccept(b)}>Accept</button>
                 <button className="danger" onClick={() => adminReject(b)}>Reject</button>
               </span>
-            </div>
-          ))}
-          <h3>Awaiting receipt confirmation</h3>
-          {bookings.filter((b) => b.status === 'accepted' && b.receiptStatus === 'requested').length === 0 && <p className="muted">None.</p>}
-          {bookings.filter((b) => b.status === 'accepted' && b.receiptStatus === 'requested').map((b) => (
-            <div key={b.id} className="booking accepted">
-              <span>{b.name} · {new Date(b.startISO).toLocaleString('en-HK')} · {b.quote.total} HKD</span>
-              <button onClick={() => adminConfirmReceipt(b)}>Confirm receipt</button>
             </div>
           ))}
         </div>
