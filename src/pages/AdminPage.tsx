@@ -30,10 +30,16 @@ export default function AdminPage({ customers, bookings, onUpdate }: {
   }, [tab])
 
   async function completeOrder(id: string) {
+    const order = orders.find((x) => x.id === id)
     try {
+      // Prepay orders convert the paid amount into credits for that user.
+      if (order && order.items.length === 1 && /^🏦 Prepay/.test(order.items[0])) {
+        await API.addCredits(order.username, order.total)
+      }
       await API.completeItemOrder(id)
       setOrders((o) => o.filter((x) => x.id !== id))
       setOrderDetail(null)
+      onUpdate()
     } catch (e: any) {
       setErr(e.message)
     }

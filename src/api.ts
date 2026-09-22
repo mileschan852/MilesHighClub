@@ -30,6 +30,7 @@ function bookingToApp(row: DbBooking): Booking {
     receiptStatus: (row as any).receipt_status ?? null,
     receiptImageUrl: (row as any).receipt_image_url ?? null,
     quote_base: (row as any).quote_base ?? null,
+    creditsUsed: (row as any).credits_used ?? 0,
   }
 }
 
@@ -145,6 +146,16 @@ export const API = {
   },
 
   async setBookingStatus(id: string, status: 'accepted' | 'rejected'): Promise<Booking> {
+    // Refund any credits back to the user when a booking is rejected/cancelled.
+    if (status === 'rejected') {
+      const { data: b } = await supabase.from('bookings').select('customer_id, credits_used').eq('id', id).maybeSingle()
+      const used = Number((b as any)?.credits_used ?? 0)
+      const custId = Number((b as any)?.customer_id ?? 0)
+      if (used > 0 && custId) {
+        const { data: u } = await supabase.from('users_list').select('credits').eq('telegram_id', custId).maybeSingle()
+        if (u) await supabase.from('users_list').update({ credits: Number((u as any).credits ?? 0) + used }).eq('telegram_id', custId)
+      }
+    }
     const { data, error } = await supabase
       .from('bookings')
       .update({ status })
@@ -159,11 +170,24 @@ export const API = {
   // enters the adjusted transport fare; the total is updated accordingly.
   async acceptQuote(id: string, adjustedFare?: number): Promise<void> {
     if (typeof adjustedFare === 'number') {
-      const { data } = await supabase.from('bookings').select('quote_base').eq('id', id).maybeSingle()
+      const { data } = await supabase.from('bookings').select('quote_base, credits_used, customer_id').eq('id', id).maybeSingle()
       const base = Number((data as any)?.quote_base ?? 0)
+      let creditsUsed = Number((data as any)?.credits_used ?? 0)
+      // The adjusted transport amount admin enters is NOT payable with
+      // credits: cap the credits at the base (service) portion and refund
+      // anything over-deducted back to the user's balance.
+      if (creditsUsed > base) {
+        const refund = creditsUsed - base
+        creditsUsed = base
+        const custId = Number((data as any)?.customer_id ?? 0)
+        if (custId) {
+          const { data: u } = await supabase.from('users_list').select('credits').eq('telegram_id', custId).maybeSingle()
+          if (u) await supabase.from('users_list').update({ credits: Number((u as any).credits ?? 0) + refund }).eq('telegram_id', custId)
+        }
+      }
       const { error } = await supabase
         .from('bookings')
-        .update({ quote_price: base + adjustedFare, transport_option: 'B', receipt_status: 'requested', status: 'accepted' })
+        .update({ quote_price: base + adjustedFare, transport_option: 'B', receipt_status: 'requested', status: 'accepted', credits_used: creditsUsed })
         .eq('id', id)
       if (error) throw new Error(error.message)
       return
@@ -221,6 +245,22 @@ export const API = {
   async createBooking(b: Omit<Booking, 'id' | 'status'>): Promise<Booking> {
     const start = new Date(b.startISO)
     const end = new Date(start.getTime() + 60 * 60 * 1000)
+    // Deduct the user's credits first (capped at the total); the remainder is
+    // what they pay by receipt. Only the client's own quote total is covered -
+    // any transport amount the admin later adjusts in is NOT credit-deductible.
+    const username = (b as any).username ?? ''
+    let creditsUsed = 0
+    if (username) {
+      const { data: u } = await supabase.from('users_list').select('credits').eq('username', username).maybeSingle()
+      creditsUsed = Math.min(Math.max(0, Number((u as any)?.credits ?? 0)), Math.max(0, b.quote.total))
+      if (creditsUsed > 0) {
+        const { error: credErr } = await supabase
+          .from('users_list')
+          .update({ credits: Number((u as any).credits) - creditsUsed })
+          .eq('username', username)
+        if (credErr) throw new Error(credErr.message)
+      }
+    }
     const row = {
       customer_id: b.telegramUserId,
       start_time: start.toISOString(),
@@ -231,10 +271,11 @@ export const API = {
       quote_base: b.quote.base,
       quote_price: b.quote.total,
       status: 'pending' as const,
+      credits_used: creditsUsed,
     }
     const { data, error } = await supabase.from('bookings').insert(row).select().single()
     if (error) throw new Error(error.message)
-    notifyAdminBot(`New booking: ${b.name}, ${start.toLocaleString('en-HK')}, ${b.people}p, ${b.quote.total} HKD`).catch(() => {})
+    notifyAdminBot(`New booking: ${b.name}, ${start.toLocaleString('en-HK')}, ${b.people}p, ${b.quote.total} HKD${creditsUsed > 0 ? ` (credits used: ${creditsUsed}, to pay: ${b.quote.total - creditsUsed})` : ''}`).catch(() => {})
     return bookingToApp(data as DbBooking)
   },
 
@@ -281,6 +322,22 @@ export const API = {
   async completeItemOrder(id: string): Promise<void> {
     const { error } = await supabase.from('item_orders').delete().eq('id', id)
     if (error) throw new Error(error.message)
+  },
+
+  // Add the purchase amount of a completed prepay order to the user's credits.
+  async addCredits(username: string, amount: number): Promise<void> {
+    const { data, error } = await supabase
+      .from('users_list')
+      .select('credits')
+      .eq('username', username)
+      .maybeSingle()
+    if (error) throw new Error(error.message)
+    const current = Number((data as any)?.credits ?? 0)
+    const { error: upErr } = await supabase
+      .from('users_list')
+      .update({ credits: current + amount })
+      .eq('username', username)
+    if (upErr) throw new Error(upErr.message)
   },
 
   async saveAdminLocation(lat: number, lng: number): Promise<void> {

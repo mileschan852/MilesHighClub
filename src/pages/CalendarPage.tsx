@@ -177,6 +177,7 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
     if (!picked || !quote) return
     const b = await API.createBooking({
       telegramUserId: user.id,
+      username: (user.username ?? '').toLowerCase(),
       name: user.name,
       phone: customers.find((c) => c.username === (user.username ?? '').toLowerCase())?.phone ?? '',
       address: [addressNo, addressName].filter(Boolean).join(' '),
@@ -454,8 +455,9 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3>Send payment receipt</h3>
             <p>
-              Please upload a transaction receipt of <strong>{receiptFor.quote.total} HKD</strong> for your
-              booking {fmtHk(new Date(receiptFor.startISO))}–{fmtHk(new Date(new Date(receiptFor.startISO).getTime() + BOOKING_MS))}.
+              Please upload a transaction receipt of <strong>{receiptFor.quote.total - (receiptFor.creditsUsed ?? 0)} HKD</strong> for your
+              booking {fmtHk(new Date(receiptFor.startISO))}–{fmtHk(new Date(new Date(receiptFor.startISO).getTime() + BOOKING_MS))}
+              {(receiptFor.creditsUsed ?? 0) > 0 && <> ({receiptFor.creditsUsed} HKD paid with credits, {receiptFor.quote.total - (receiptFor.creditsUsed ?? 0)} HKD to send)</>}.
             </p>
             <input
               ref={fileInputRef}

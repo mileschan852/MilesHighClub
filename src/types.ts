@@ -3,6 +3,7 @@ export type Page = 'calendar' | 'map' | 'items' | 'customers' | 'profile'
 export interface Booking {
   id: string
   telegramUserId: number
+  username?: string
   name: string
   phone: string
   address: string
@@ -20,6 +21,8 @@ export interface Booking {
   //   'confirmed'        - admin accepted the receipt (green to admin, red to others)
   receiptStatus?: 'requested' | 'submitted' | 'confirmed' | null
   receiptImageUrl?: string | null
+  // Credits applied at booking time (deducted from the user's balance).
+  creditsUsed?: number | null
 }
 
 export interface CustomerInfo {
