@@ -8,7 +8,6 @@ export interface QuoteInput {
   onHKIslandMTR: boolean      // location is at/on a Hong Kong Island MTR station
   inKowloonOrNT: boolean      // location is in Kowloon or New Territories
   requestTaxi: boolean        // customer explicitly chose "request taxi"
-  uberHighFare?: number       // Uber highest estimate (one-way) from worker, HKD
   surcharge?: number          // admin-set surcharge amount
   surchargeMode?: 'per_person' | 'addition' | 'fixed' // how surcharge applies
 }
@@ -34,7 +33,7 @@ export function roundUpTo10(n: number): number {
 }
 
 // Fixed transport rates by district (day only, 08:00-23:00).
-// Night (23:01-07:59) always uses taxi = Uber price x 2.
+// Night (23:01-07:59) taxi cost is entered manually by admin.
 export function districtTransport(hkIsland: boolean, klnOrNT: boolean): number {
   return hkIsland ? 50 : klnOrNT ? 100 : 100 // unknown district defaults to KLN/NT rate
 }
@@ -55,10 +54,9 @@ export function calculateQuote(input: QuoteInput): QuoteResult {
     taxiFare = 0
     option = 'NONE'
   } else if (night && input.requestTaxi) {
-    // Night (23:00-07:59): Uber standard taxi, total = 2 x maximum standard
-    // metered taxi price, rounded up to the nearest 10 HKD.
-    const maxMetered = roundUpTo10(input.uberHighFare ?? 0)
-    taxiFare = maxMetered * 2
+    // Night (23:00-07:59): taxi cost is quoted at 0 here and entered
+    // manually by admin via the transport adjustment step.
+    taxiFare = 0
     option = 'B'
   } else {
     // Day: flat transport, 50 HK Island / 100 KLN+NT.

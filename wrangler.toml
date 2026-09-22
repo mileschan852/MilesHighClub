@@ -8,7 +8,7 @@ id = "51473a87c0c6452982a3a909de52b7ec"
 
 [vars]
 ADMIN_TELEGRAM_ID = "1231127407"
-# TELEGRAM_BOT_TOKEN and UBER_API_TOKEN go in `wrangler secret put ...`
+# TELEGRAM_BOT_TOKEN go in `wrangler secret put ...`
 
 [assets]
 directory = "./dist"

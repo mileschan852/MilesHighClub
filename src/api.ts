@@ -232,7 +232,7 @@ export const API = {
     surchargeMode?: 'per_person' | 'addition' | 'fixed'
   }): Promise<QuoteResult> {
     // Quote logic lives in src/pricing.ts, shared client + (former) worker.
-    return calculateQuote({ ...args, uberHighFare: undefined })
+    return calculateQuote(args)
   },
 
   async createBooking(b: Omit<Booking, 'id' | 'status'>): Promise<Booking> {

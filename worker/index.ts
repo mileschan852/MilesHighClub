@@ -1,14 +1,11 @@
 // Cloudflare Worker backend for MilesHighClub.
 // KV namespace binding: MHC_KV
-// Vars: TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_ID, UBER_API_TOKEN (optional)
+// Vars: TELEGRAM_BOT_TOKEN, ADMIN_TELEGRAM_ID
 
 export interface Env {
   MHC_KV: KVNamespace
   TELEGRAM_BOT_TOKEN: string
   ADMIN_TELEGRAM_ID: string
-  UBER_API_TOKEN?: string
-  MILES_LAT?: string
-  MILES_LNG?: string
 }
 
 import { calculateQuote } from '../src/pricing'
@@ -37,8 +34,7 @@ export default {
 
     if (path === '/api/quote' && req.method === 'POST') {
       const body = await req.json<any>()
-      const uber = body.requestTaxi ? await uberHighestFare(env, body.location) : undefined
-      const q = calculateQuote({ ...body, uberHighFare: uber })
+      const q = calculateQuote(body)
       return json(q)
     }
 
@@ -127,29 +123,6 @@ async function verifyTelegram(req: Request, env: Env, rawBody?: string) {
 async function isNight(startISO: string) {
   const hour = (new Date(startISO).getUTCHours() + 8) % 24
   return hour >= 23 || hour < 8
-}
-
-async function uberHighestFare(env: Env, destination: string): Promise<number> {
-  // Uber standard TAXI product: maximum standard metered taxi price (one-way),
-  // converted to HKD. Fallback: flat 300 HKD one-way metered-taxi band.
-  if (!env.UBER_API_TOKEN) return 300
-  try {
-    const res = await fetch('https://api.uber.com/v1.2/estimates/price', {
-      method: 'POST',
-      headers: { authorization: `Bearer ${env.UBER_API_TOKEN}`, 'content-type': 'application/json' },
-      body: JSON.stringify({
-        start_latitude: Number(env.MILES_LAT ?? 22.28), start_longitude: Number(env.MILES_LNG ?? 114.158),
-        end_address: destination, seat_count: 1,
-      }),
-    })
-    const data = await res.json() as { prices?: { display_name?: string; high_estimate?: number }[] }
-    const taxiPrices = (data.prices ?? []).filter((p) => (p.display_name ?? '').toLowerCase().includes('taxi'))
-    const pool = taxiPrices.length ? taxiPrices : data.prices ?? []
-    const usd = Math.max(0, ...pool.map((p) => p.high_estimate ?? 0))
-    return usd * 7.8 // USD -> HKD
-  } catch {
-    return 300
-  }
 }
 
 async function listBookings(env: Env): Promise<Booking[]> {
