@@ -369,10 +369,10 @@ function safeParse(s: string | null): any {
 async function verifyTelegram(req: Request, env: Env, rawBody?: string) {
   // https://core.telegram.org/bots/webapps#validating-data-received-via-the-mini-app
   const headerData = req.headers.get('x-init-data') || ''
-  let initData = rawBody ?? headerData
+  let initData = headerData
   try {
     const parsed = JSON.parse(rawBody ?? '') as any
-    if (parsed && typeof parsed.initData === 'string') initData = parsed.initData
+    if (parsed && typeof parsed.initData === 'string' && parsed.initData) initData = parsed.initData
   } catch {}
   if (!initData || !env.TELEGRAM_BOT_TOKEN) return null
   const params = new URLSearchParams(initData)

@@ -5,7 +5,7 @@ compatibility_date = "2026-01-01"
 [[d1_databases]]
 binding = "MHC_DB"
 database_name = "mileshighclub"
-database_id = "TO_BE_FILLED_BY_WRANGLER_CREATE"
+database_id = "71e7cff2-b495-47a0-9f93-d492235244a5"
 
 [[r2_buckets]]
 binding = "RECEIPTS"
