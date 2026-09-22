@@ -2,13 +2,19 @@ name = "mileshighclub"
 main = "worker/index.ts"
 compatibility_date = "2026-01-01"
 
-[[kv_namespaces]]
-binding = "MHC_KV"
-id = "51473a87c0c6452982a3a909de52b7ec"
+[[d1_databases]]
+binding = "MHC_DB"
+database_name = "mileshighclub"
+database_id = "TO_BE_FILLED_BY_WRANGLER_CREATE"
+
+[[r2_buckets]]
+binding = "RECEIPTS"
+bucket_name = "mileshighclub-receipts"
 
 [vars]
 ADMIN_TELEGRAM_ID = "1231127407"
-# TELEGRAM_BOT_TOKEN go in `wrangler secret put ...`
+ADMIN_USERNAMES = "mileschan852,hkmembersonly"
+# TELEGRAM_BOT_TOKEN goes in `wrangler secret put ...`
 
 [assets]
 directory = "./dist"

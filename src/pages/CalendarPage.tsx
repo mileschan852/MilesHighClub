@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Booking } from '../types'
 import { API } from '../api'
-import { supabase } from '../supabase'
 import { NON_REFUNDABLE_NOTICE, isNightRate } from '../pricing'
 import { CustomerInfo } from '../types'
 import { UNIQUE_MTR_STATIONS } from '../mtr'
@@ -207,11 +206,15 @@ export default function CalendarPage({ bookings, user, isAdmin, customers = [], 
   // Client actions on their own block.
   async function uploadReceipt() {
     if (!receiptFor || !receiptFile) return
-    const path = `booking-receipts/${receiptFor.id}-${Date.now()}-${receiptFile.name.replace(/[^\w.-]/g, '_')}`
-    const { error: upErr } = await supabase.storage.from('receipts').upload(path, receiptFile, { upsert: true })
-    if (upErr) { setErr(upErr.message); return }
-    const { data } = supabase.storage.from('receipts').getPublicUrl(path)
-    await API.submitReceipt(receiptFor.id, data?.publicUrl ?? '')
+    const url = URL.createObjectURL(receiptFile)
+    try {
+      await API.submitReceipt(receiptFor.id, url)
+    } catch (e: any) {
+      setErr(e?.message ?? 'upload failed')
+      URL.revokeObjectURL(url)
+      return
+    }
+    URL.revokeObjectURL(url)
     setReceiptFor(null); setReceiptFile(null)
     onBooked()
   }
