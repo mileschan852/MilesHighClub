@@ -146,16 +146,6 @@ export const API = {
   },
 
   async setBookingStatus(id: string, status: 'accepted' | 'rejected'): Promise<Booking> {
-    // Refund any credits back to the user when a booking is rejected/cancelled.
-    if (status === 'rejected') {
-      const { data: b } = await supabase.from('bookings').select('customer_id, credits_used').eq('id', id).maybeSingle()
-      const used = Number((b as any)?.credits_used ?? 0)
-      const custId = Number((b as any)?.customer_id ?? 0)
-      if (used > 0 && custId) {
-        const { data: u } = await supabase.from('users_list').select('credits').eq('telegram_id', custId).maybeSingle()
-        if (u) await supabase.from('users_list').update({ credits: Number((u as any).credits ?? 0) + used }).eq('telegram_id', custId)
-      }
-    }
     const { data, error } = await supabase
       .from('bookings')
       .update({ status })
@@ -170,20 +160,15 @@ export const API = {
   // enters the adjusted transport fare; the total is updated accordingly.
   async acceptQuote(id: string, adjustedFare?: number): Promise<void> {
     if (typeof adjustedFare === 'number') {
-      const { data } = await supabase.from('bookings').select('quote_base, credits_used, customer_id').eq('id', id).maybeSingle()
+      const { data } = await supabase.from('bookings').select('quote_base, customer_id').eq('id', id).maybeSingle()
       const base = Number((data as any)?.quote_base ?? 0)
-      let creditsUsed = Number((data as any)?.credits_used ?? 0)
-      // The adjusted transport amount admin enters is NOT payable with
-      // credits: cap the credits at the base (service) portion and refund
-      // anything over-deducted back to the user's balance.
-      if (creditsUsed > base) {
-        const refund = creditsUsed - base
-        creditsUsed = base
-        const custId = Number((data as any)?.customer_id ?? 0)
-        if (custId) {
-          const { data: u } = await supabase.from('users_list').select('credits').eq('telegram_id', custId).maybeSingle()
-          if (u) await supabase.from('users_list').update({ credits: Number((u as any).credits ?? 0) + refund }).eq('telegram_id', custId)
-        }
+      // The adjusted transport amount admin enters is NOT payable with credits.
+      // Recompute credit coverage against the base (service) portion only.
+      const custId = Number((data as any)?.customer_id ?? 0)
+      let creditsUsed = 0
+      if (custId) {
+        const { data: u } = await supabase.from('users_list').select('credits').eq('telegram_id', custId).maybeSingle()
+        if (u) creditsUsed = Math.min(Math.max(0, Number((u as any).credits ?? 0)), Math.max(0, base))
       }
       const { error } = await supabase
         .from('bookings')
@@ -210,6 +195,14 @@ export const API = {
 
   // Admin accepted the receipt: green for admin, red for everyone else.
   async confirmReceipt(id: string): Promise<void> {
+    // Payment is now confirmed: deduct the credits this booking consumed.
+    const { data: b } = await supabase.from('bookings').select('customer_id, credits_used, receipt_status').eq('id', id).maybeSingle()
+    const used = Number((b as any)?.credits_used ?? 0)
+    const custId = Number((b as any)?.customer_id ?? 0)
+    if (used > 0 && custId && (b as any)?.receipt_status !== 'confirmed') {
+      const { data: u } = await supabase.from('users_list').select('credits').eq('telegram_id', custId).maybeSingle()
+      if (u) await supabase.from('users_list').update({ credits: Math.max(0, Number((u as any).credits ?? 0) - used) }).eq('telegram_id', custId)
+    }
     const { error } = await supabase
       .from('bookings')
       .update({ receipt_status: 'confirmed', status: 'accepted' })
@@ -245,21 +238,14 @@ export const API = {
   async createBooking(b: Omit<Booking, 'id' | 'status'>): Promise<Booking> {
     const start = new Date(b.startISO)
     const end = new Date(start.getTime() + 60 * 60 * 1000)
-    // Deduct the user's credits first (capped at the total); the remainder is
-    // what they pay by receipt. Only the client's own quote total is covered -
-    // any transport amount the admin later adjusts in is NOT credit-deductible.
+    // Credits are NOT deducted here. The booking only records how much of
+    // the total can be covered by the client's current credits (credits_used).
+    // Actual deduction happens when admin confirms the receipt (payment).
     const username = (b as any).username ?? ''
     let creditsUsed = 0
     if (username) {
       const { data: u } = await supabase.from('users_list').select('credits').eq('username', username).maybeSingle()
       creditsUsed = Math.min(Math.max(0, Number((u as any)?.credits ?? 0)), Math.max(0, b.quote.total))
-      if (creditsUsed > 0) {
-        const { error: credErr } = await supabase
-          .from('users_list')
-          .update({ credits: Number((u as any).credits) - creditsUsed })
-          .eq('username', username)
-        if (credErr) throw new Error(credErr.message)
-      }
     }
     const row = {
       customer_id: b.telegramUserId,
