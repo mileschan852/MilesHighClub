@@ -29,7 +29,10 @@ export default function ItemsPage({ username = '', showItems = false }: { userna
 
   const total = useMemo(() => {
     let t = 0
-    if (showItems && checked.ice) t += ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0
+    if (showItems && checked.ice) {
+      const tier = ICE_TIERS.find((i) => i.qty === iceTier)
+      if (tier) t += tier.qty * tier.price // unit price x quantity
+    }
     FIXED_ITEMS.forEach((it, i) => {
       // Prepay rows (last two) are always visible; the rest need showItems
       if (checked['f' + i] && (showItems || i >= FIXED_ITEMS.length - 2)) t += it.price
@@ -86,7 +89,7 @@ export default function ItemsPage({ username = '', showItems = false }: { userna
             <option key={t.qty} value={t.qty}>x{t.qty}</option>
           ))}
           </select>
-          <span className="item-price" style={{ marginLeft: 'auto' }}>${checked.ice ? (ICE_TIERS.find((i) => i.qty === iceTier)?.price ?? 0) : ICE_TIERS.find((i) => i.qty === iceTier)?.price}</span>
+          <span className="item-price" style={{ marginLeft: 'auto' }}>${(() => { const t = ICE_TIERS.find((i) => i.qty === iceTier); return t ? `${t.price}/ x${t.qty} = $${t.qty * t.price}` : '' })()}</span>
         </label>
       )}
       {FIXED_ITEMS.map((it, i) => (
